@@ -32,13 +32,15 @@ class OptimizedChatConsumer(WebsocketConsumer):
         self.accept()
 
         # Отправляем сообщение о подключении
+        from django.utils import timezone
+        localized_time = timezone.localtime(timezone.now())
         async_to_sync(self.channel_layer.group_send)(
             self.room_group_name,
             {
                 'type': 'chat_message',
                 'message': f'Пользователь {self.scope["user"].username} присоединился к чату',
                 'username': 'System',
-                'timestamp': timezone.now().strftime('%H:%M')
+                'timestamp': localized_time.strftime('%H:%M')  # Используем локализованное время
             }
         )
 
@@ -82,13 +84,17 @@ class OptimizedChatConsumer(WebsocketConsumer):
                 )
 
                 # Отправляем сообщение в группу комнаты
+                from django.utils import timezone
+                from datetime import datetime
+                # Используем локализованное время для корректного отображения с учетом часового пояса
+                localized_time = timezone.localtime(timezone.now())
                 async_to_sync(self.channel_layer.group_send)(
                     self.room_group_name,
                     {
                         'type': 'chat_message',
                         'message': message_content,
                         'username': username,
-                        'timestamp': timezone.now().strftime('%H:%M')
+                        'timestamp': localized_time.strftime('%H:%M')  # Используем локализованное время
                     }
                 )
         except json.JSONDecodeError:

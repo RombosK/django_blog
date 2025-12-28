@@ -54,11 +54,12 @@ ENV_TYPE = os.getenv('ENV_TYPE', 'local')
 # SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 # SESSION_CACHE_ALIAS = 'default'
 #
-# if DEBUG:
-#     INTERNAL_IPS = [
-#         "localhost",
-#         "127.0.0.1",
-#     ]
+
+if DEBUG:
+    INTERNAL_IPS = [
+        "localhost",
+        "127.0.0.1",
+    ]
 
 # Application definition
 
