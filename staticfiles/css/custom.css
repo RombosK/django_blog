@@ -1,0 +1,31 @@
+.form-check-input {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.2em;
+    height: 1.2em;
+    background-color: white;
+    border: 2px solid #adb5bd;
+    border-radius: 0.25em;
+    display: inline-block;
+    position: relative;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.form-check-input:checked::after {
+    content: "";
+    position: absolute;
+    top: 0.15em;
+    left: 0.4em;
+    width: 0.4em;
+    height: 0.7em;
+    border: solid white;
+    border-width: 0 0.15em 0.15em 0;
+    transform: rotate(45deg);
+}
+

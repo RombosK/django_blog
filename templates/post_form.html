@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if post %}Редактировать пост{% else %}Создать пост{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>{% if post %}Редактировать пост{% else %}Создать пост{% endif %}</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Заголовок</label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               value="{% if post %}{{ post.title }}{% elif title %}{{ title }}{% endif %}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="content" class="form-label">Содержание</label>
+                        <textarea class="form-control" id="content" name="content" rows="10" required>
+{% if post %}{{ post.content }}{% elif content %}{{ content }}{% endif %}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Изображение</label>
+                        <input type="file" class="form-control" id="image" name="image" 
+                               accept="image/*">
+                        {% if post and post.image %}
+                        <div class="mt-2">
+                            <img src="{{ post.image.url }}" alt="{{ post.title }}" 
+                                 style="max-height: 200px; object-fit: cover;">
+                            <small class="text-muted d-block mt-1">Текущее изображение</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_published" name="is_published"
+                               {% if post %}{% if post.is_published %}checked{% endif %}{% elif is_published %}checked{% endif %}>
+                        <label class="form-check-label" for="is_published">Опубликовать</label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        {% if post %}Обновить{% else %}Создать{% endif %}
+                    </button>
+                    <a href="{% url 'blog:home' %}" class="btn btn-secondary">Отмена</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

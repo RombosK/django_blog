@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            {% if post.image %}
+            <img src="{{ post.image.url }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 400px; object-fit: cover;">
+            {% endif %}
+            <div class="card-body">
+                <h1 class="card-title">{{ post.title }}</h1>
+                {% if post.is_published %}
+                <p class="card-text">{{ post.content }}</p>
+                {% else %}
+                <p class="card-text text-muted">Содержание доступно только авторизованным пользователям с соответствующими правами.</p>
+                {% endif %}
+                <p class="card-text">
+                    <small class="text-muted">
+                        Автор: {{ post.author.email }} | 
+                        {{ post.created_at|date:"d.m.Y H:i" }}
+                        {% if post.updated_at and post.updated_at != post.created_at %}
+                        (обновлено: {{ post.updated_at|date:"d.m.Y H:i" }})
+                        {% endif %}
+                    </small>
+                </p>
+                
+                {% if user.is_staff or user.is_superuser %}
+                <div class="mt-3">
+                    <a href="{% url 'blog:post_edit' post.pk %}" class="btn btn-sm btn-outline-secondary me-2">
+                        Редактировать
+                    </a>
+                    <a href="{% url 'blog:post_delete' post.pk %}" class="btn btn-sm btn-outline-danger">
+                        Удалить
+                    </a>
+                </div>
+                {% endif %}
+
+                <!-- Секция реакций -->
+                {% if user.is_authenticated %}
+                <div class="mt-3 d-flex align-items-center" style="flex-wrap: wrap; gap: 0.5rem;">
+                    <form method="post" action="{% url 'blog:toggle_reaction' post.pk %}" class="mb-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="reaction_type" value="like">
+                        <button type="submit" class="btn btn-sm {% if user_reaction == 'like' %}btn-primary{% else %}btn-outline-primary{% endif %} d-flex align-items-center">
+                            <span class="me-1">👍</span>
+                            <span>{{ like_count }}</span>
+                        </button>
+                    </form>
+                    
+                    <form method="post" action="{% url 'blog:toggle_reaction' post.pk %}" class="mb-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="reaction_type" value="dislike">
+                        <button type="submit" class="btn btn-sm {% if user_reaction == 'dislike' %}btn-danger{% else %}btn-outline-danger{% endif %} d-flex align-items-center">
+                            <span class="me-1">👎</span>
+                            <span>{{ dislike_count }}</span>
+                        </button>
+                    </form>
+                    
+                    <!-- Кнопка Обсудить для перехода в чат -->
+                    <a href="{% url 'blog:chat_room' post.slug|default:'general' %}" class="btn btn-sm btn-outline-info mb-0 d-flex align-items-center" style="color: #495057 !important;">
+                        <span class="me-1">💬</span>
+                        <span>Обсудить</span>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Кнопка быстрого перехода на главную страницу -->
+        <div class="mt-3 text-center">
+            <a href="{% url 'blog:home' %}" class="btn btn-primary">
+                <i class="fas fa-home me-1"></i>
+                Вернуться на главную
+            </a>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Информация</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Статус:</strong>
+                    {% if post.is_published %}
+                    <span class="badge bg-success">Опубликован</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Черновик</span>
+                    {% endif %}
+                </p>
+                <p><strong>Дата создания:</strong><br>{{ post.created_at|date:"d.m.Y H:i" }}</p>
+                {% if post.updated_at and post.updated_at != post.created_at %}
+                <p><strong>Дата обновления:</strong><br>{{ post.updated_at|date:"d.m.Y H:i" }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
