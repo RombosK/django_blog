@@ -26,6 +26,37 @@
                 {% endfor %}
             </div>
 
+            <!-- Пагинация -->
+            {% if messages.has_other_pages %}
+            <nav aria-label="Навигация по сообщениям" class="mb-3">
+                <ul class="pagination justify-content-center">
+                    {% if messages.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ messages.previous_page_number }}">Назад</a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in messages.paginator.page_range %}
+                        {% if messages.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > messages.number|add:'-3' and num < messages.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if messages.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ messages.next_page_number }}">Вперед</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
             <!-- Поле ввода -->
             <div class="input-group mb-3 position-relative" style="margin-top: 15px;">
                 <input
