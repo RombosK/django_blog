@@ -39,27 +39,51 @@
             <nav aria-label="Навигация по сообщениям" class="mb-3">
                 <ul class="pagination justify-content-center">
                     {% if messages.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ messages.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Назад</a>
-                    </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Первая</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ messages.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Предыдущая</a>
+                        </li>
                     {% endif %}
 
-                    {% for num in messages.paginator.page_range %}
-                        {% if messages.number == num %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ num }}</span>
-                        </li>
-                        {% elif num > messages.number|add:'-3' and num < messages.number|add:'3' %}
+                    {% if messages.number > 3 %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+                            <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">1</a>
                         </li>
+                        {% if messages.number > 4 %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endif %}
+
+                    {% for page_num in messages.paginator.page_range %}
+                        {% if page_num >= messages.number|add:'-2' and page_num <= messages.number|add:'2' %}
+                            {% if messages.number == page_num %}
+                                <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ page_num }}</a>
+                                </li>
+                            {% endif %}
                         {% endif %}
                     {% endfor %}
 
+                    {% if messages.number < messages.paginator.num_pages|add:'-2' %}
+                        {% if messages.number < messages.paginator.num_pages|add:'-3' %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ messages.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ messages.paginator.num_pages }}</a>
+                        </li>
+                    {% endif %}
+
                     {% if messages.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ messages.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Вперед</a>
-                    </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ messages.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Следующая</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ messages.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Последняя</a>
+                        </li>
                     {% endif %}
                 </ul>
             </nav>
