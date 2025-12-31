@@ -89,11 +89,11 @@ MIDDLEWARE = [
     'blog.middleware.DatabaseQueryCountMiddleware',  # Добавляем оптимизированный middleware
 ]
 
-if DEBUG:
-    MIDDLEWARE += [
-        'debug_toolbar.middleware.DebugToolbarMiddleware',
-        'blog.middleware.DatabaseQueryCountMiddleware',
-    ]
+# if DEBUG:
+#     MIDDLEWARE += [
+#         'debug_toolbar.middleware.DebugToolbarMiddleware',
+#         'blog.middleware.DatabaseQueryCountMiddleware',
+#     ]
 
 # Путь к кастомной странице 404
 handler404 = 'django.views.defaults.page_not_found'

@@ -11,6 +11,14 @@
             <a href="{% url 'blog:home' %}" class="btn btn-sm btn-primary">Назад</a>
         </div>
         <div class="card-body">
+            <!-- Форма поиска -->
+            <form method="get" action="{% url 'blog:chat_room' room_name %}" class="mb-3">
+                <div class="input-group">
+                    <input type="text" class="form-control" name="q" placeholder="Поиск сообщений..." value="{{ search_query }}">
+                    <button class="btn btn-outline-secondary" type="submit">Поиск</button>
+                </div>
+            </form>
+
             <div
                 class="chat-messages"
                 id="chat-messages"
@@ -32,7 +40,7 @@
                 <ul class="pagination justify-content-center">
                     {% if messages.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ messages.previous_page_number }}">Назад</a>
+                        <a class="page-link" href="?page={{ messages.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Назад</a>
                     </li>
                     {% endif %}
 
@@ -43,14 +51,14 @@
                         </li>
                         {% elif num > messages.number|add:'-3' and num < messages.number|add:'3' %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
                         </li>
                         {% endif %}
                     {% endfor %}
 
                     {% if messages.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ messages.next_page_number }}">Вперед</a>
+                        <a class="page-link" href="?page={{ messages.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Вперед</a>
                     </li>
                     {% endif %}
                 </ul>

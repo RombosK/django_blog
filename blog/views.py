@@ -26,6 +26,9 @@ def chat_room(request, room_name):
     from django.core.cache import cache
     cache_key = f'chat_latest_messages_{room_name}'
 
+    # Получаем параметр поиска
+    search_query = request.GET.get('q')
+
     # Попробуем получить последние сообщения из кеша
     messages_list = cache.get(cache_key)
 
@@ -34,7 +37,12 @@ def chat_room(request, room_name):
         # Используем values() для получения только необходимых данных, чтобы избежать дополнительных запросов в шаблоне
         messages_raw = Message.objects.filter(room=room).select_related('user').values(
             'content', 'created_at', 'user__username'
-        ).order_by('-created_at')[:50]  # Ограничиваем до 50 последних сообщений
+        ).order_by('-created_at')  # Получаем все сообщения, отсортированные по дате
+
+        # Применяем поиск, если передан параметр q
+        if search_query:
+            # Фильтруем сообщения по содержанию, используя полученные значения
+            messages_raw = messages_raw.filter(content__icontains=search_query)
 
         # Преобразуем в список словарей, чтобы избежать дополнительных запросов в шаблоне
         messages_list = []
@@ -47,6 +55,10 @@ def chat_room(request, room_name):
 
         # Кешируем на 5 минут
         cache.set(cache_key, messages_list, 300)
+    else:
+        # Если сообщения были в кеше, но есть поисковый запрос, фильтруем их
+        if search_query:
+            messages_list = [msg for msg in messages_list if search_query.lower() in msg['content'].lower()]
 
     # Пагинация: 50 сообщений на страницу
     paginator = Paginator(messages_list, 50)
@@ -61,22 +73,71 @@ def chat_room(request, room_name):
     return render(request, 'chat/room.html', {
         'room_name': room_name,
         'display_name': display_name,
-        'messages': messages
+        'messages': messages,
+        'search_query': search_query or ''
     })
+
+
+from django.core.paginator import Paginator
+from django.core.paginator import EmptyPage, PageNotAnInteger
 
 
 class HomeView(ListView):
     """Главная страница с постами"""
     model = Post
     template_name = 'home.html'
-    context_object_name = 'page_obj'
+    context_object_name = 'posts'
     paginate_by = 5
 
     def get_queryset(self):
-        """Возвращаем только опубликованные посты с оптимизированными связями"""
-        return Post.objects.filter(is_published=True).select_related('author').only(
-            'title', 'content', 'created_at', 'author__username'
-        ).order_by('-created_at')
+        """Возвращаем только опубликованные посты, с возможностью поиска"""
+        queryset = Post.objects.filter(is_published=True).order_by('-created_at')
+
+        # Добавляем поиск, если передан параметр q
+        search_query = self.request.GET.get('q')
+        if search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) |
+                Q(content__icontains=search_query)
+            )
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        """Добавляем в контекст данные о поиске и пагинации"""
+        context = super().get_context_data(**kwargs)
+
+        # Получаем queryset для поиска
+        search_query = self.request.GET.get('q')
+        if search_query:
+            full_queryset = Post.objects.filter(is_published=True).order_by('-created_at')
+            full_queryset = full_queryset.filter(
+                Q(title__icontains=search_query) |
+                Q(content__icontains=search_query)
+            )
+        else:
+            full_queryset = Post.objects.filter(is_published=True).order_by('-created_at')
+
+        # Создаем пагинатор вручную для гарантии правильной работы
+        paginator = Paginator(full_queryset, self.paginate_by)
+        page = self.request.GET.get('page')
+
+        try:
+            posts = paginator.page(page)
+        except PageNotAnInteger:
+            # Если страница не является числом, выдаем первую
+            posts = paginator.page(1)
+        except EmptyPage:
+            # Если страница вне диапазона, выдаем последнюю
+            posts = paginator.page(paginator.num_pages)
+
+        # Обновляем контекст с правильной пагинацией
+        context['posts'] = posts
+        context['search_query'] = search_query or ''
+
+        return context
+        
+
 
 class LoginView(LoginView):
     """Представление для входа в системе"""
