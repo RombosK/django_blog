@@ -1,6 +1,32 @@
+import csv
+from django.http import HttpResponse
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser, Post
+
+def export_users_csv(modeladmin, request, queryset):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="users.csv"'
+
+    writer = csv.writer(response)
+    # Заголовки
+    writer.writerow([
+        'ID', 'Email', 'Username', 'First Name', 'Last Name',
+        'Is Active', 'Is Staff', 'Is Superuser', 'Date Joined',
+        'Last Login'
+    ])
+
+    # Данные
+    for user in queryset:
+        writer.writerow([
+            user.id, user.email, user.username, user.first_name, user.last_name,
+            user.is_active, user.is_staff, user.is_superuser,
+            user.date_joined, user.last_login
+        ])
+
+    return response
+
+export_users_csv.short_description = "Экспорт выбранных пользователей в CSV"
 
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
@@ -22,6 +48,7 @@ class CustomUserAdmin(UserAdmin):
     )
     search_fields = ['email', 'username']
     ordering = ['email']
+    actions = [export_users_csv]
 
 admin.site.register(CustomUser, CustomUserAdmin)
 
