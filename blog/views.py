@@ -41,8 +41,10 @@ def chat_room(request, room_name):
 
         # Применяем поиск, если передан параметр q
         if search_query:
-            # Фильтруем сообщения по содержанию, используя полученные значения
-            messages_raw = messages_raw.filter(content__icontains=search_query)
+            # Фильтруем сообщения по содержанию и по имени пользователя
+            messages_raw = messages_raw.filter(
+                Q(content__icontains=search_query) | Q(user__username__icontains=search_query)
+            )
 
         # Преобразуем в список словарей, чтобы избежать дополнительных запросов в шаблоне
         messages_list = []
@@ -58,7 +60,7 @@ def chat_room(request, room_name):
     else:
         # Если сообщения были в кеше, но есть поисковый запрос, фильтруем их
         if search_query:
-            messages_list = [msg for msg in messages_list if search_query.lower() in msg['content'].lower()]
+            messages_list = [msg for msg in messages_list if search_query.lower() in msg['content'].lower() or search_query.lower() in msg['user_username'].lower()]
 
     # Пагинация: 50 сообщений на страницу
     paginator = Paginator(messages_list, 50)

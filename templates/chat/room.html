@@ -14,7 +14,7 @@
             <!-- Форма поиска -->
             <form method="get" action="{% url 'blog:chat_room' room_name %}" class="mb-3">
                 <div class="input-group">
-                    <input type="text" class="form-control" name="q" placeholder="Поиск сообщений..." value="{{ search_query }}">
+                    <input type="text" class="form-control" name="q" placeholder="Поиск по сообщениям и пользователям..." value="{{ search_query }}">
                     <button class="btn btn-outline-secondary" type="submit">Поиск</button>
                 </div>
             </form>
