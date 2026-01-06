@@ -4,15 +4,38 @@
 {% block title %}Выход{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="alert alert-success">
-            <h4>Вы успешно вышли из системы</h4>
-            <p>Будем рады видеть вас снова!</p>
+<div class="success-container">
+    <div class="success-card">
+        <div class="success-icon-wrapper">
+            <div class="success-icon logout-icon">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <div class="success-animation"></div>
         </div>
-        <div class="text-center mt-4">
-            <a href="{% url 'home' %}" class="btn btn-primary">На главную</a>
-            <a href="{% url 'login' %}" class="btn btn-outline-primary">Войти снова</a>
+
+        <h2 class="success-title">Вы успешно вышли из системы</h2>
+
+        <p class="success-message">
+            Спасибо, что посетили наш сайт! Будем рады видеть вас снова.
+        </p>
+
+        <div class="logout-tips">
+            <h6>
+                <i class="fas fa-shield-alt me-2"></i>
+                Безопасность
+            </h6>
+            <p>Ваш сеанс был успешно завершён. Если вы использовали общедоступный компьютер, убедитесь, что закрыли все вкладки браузера.</p>
+        </div>
+
+        <div class="success-actions">
+            <a href="{% url 'blog:home' %}" class="btn-success-primary">
+                <i class="fas fa-home me-2"></i>
+                На главную страницу
+            </a>
+            <a href="{% url 'blog:login' %}" class="btn-success-secondary">
+                <i class="fas fa-sign-in-alt me-2"></i>
+                Войти снова
+            </a>
         </div>
     </div>
 </div>

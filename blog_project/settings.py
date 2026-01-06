@@ -15,46 +15,27 @@ import os
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Загружаем переменные окружения
 load_dotenv(BASE_DIR / '.env')
-# Определяем DEBUG до его использования
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_DJANGO', 'django-insecure-8i4@r4m81&w*j%7w&$5xcx76y^2(vuli2tami#dxaq&7hfptvi')
-
-# Загружаем .env файл только в production если SECRET_KEY не задан
-if not DEBUG and os.getenv('SECRET_DJANGO') is None:
-    # load_dotenv(BASE_DIR / '.env')
-    SECRET_KEY = os.getenv('SECRET_DJANGO')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']
 
+SITE_ID = 1
+
 ENV_TYPE = os.getenv('ENV_TYPE', 'local')
 
-# Настройки кэширования
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django_redis.cache.RedisCache',
-#         'LOCATION': 'redis://127.0.0.1:6379/1',
-#         'OPTIONS': {
-#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-#         }
-#     }
-# }
-#
-# # Использование кэша для сессий (опционально)
-# SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-# SESSION_CACHE_ALIAS = 'default'
-#
-
+# Internal IPs для Django Debug Toolbar
 if DEBUG:
     INTERNAL_IPS = [
         "localhost",
@@ -62,7 +43,6 @@ if DEBUG:
     ]
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -70,6 +50,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_comments',
+    'django.contrib.sites',
     'blog',
     'debug_toolbar',
     'crispy_forms',
@@ -80,47 +62,16 @@ AUTH_USER_MODEL = 'blog.CustomUser'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.gzip.GZipMiddleware',  # Сжатие ответов
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'blog.middleware.DatabaseQueryCountMiddleware',  # Добавляем оптимизированный middleware
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'blog.middleware.DatabaseQueryCountMiddleware',
 ]
-
-# if DEBUG:
-#     MIDDLEWARE += [
-#         'debug_toolbar.middleware.DebugToolbarMiddleware',
-#         'blog.middleware.DatabaseQueryCountMiddleware',
-#     ]
-
-# Путь к кастомной странице 404
-handler404 = 'django.views.defaults.page_not_found'
-
-
-# Настройка обработки 500 ошибок
-handler500 = 'blog_project.views.custom_server_error'
-
-# Создаем директорию для статических файлов при сборке
-
-if not os.path.exists(BASE_DIR / 'staticfiles'):
-    os.makedirs(BASE_DIR / 'staticfiles')
-
-# Настройка безопасных соединений
-SECURE_SSL_REDIRECT = False
-SECURE_HSTS_SECONDS = 0
-SECURE_HSTS_INCLUDE_SUBDOMAINS = False
-SECURE_HSTS_PRELOAD = False
-
-# Включение сжатия ответов
-MIDDLEWARE = [
-    'django.middleware.gzip.GZipMiddleware',
-] + MIDDLEWARE
-
-# Настройка куки
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
 
 ROOT_URLCONF = 'blog_project.urls'
 
@@ -157,82 +108,8 @@ CHANNEL_LAYERS = {
 ASGI_APPLICATION = 'blog_project.asgi.application'
 WSGI_APPLICATION = 'blog_project.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'blog',
-#         'USER': 'postgres',
-#         'PASSWORD': os.getenv('DB_PASSWORD'),
-#         'HOST': os.getenv('DB_HOST', 'localhost'),
-#         'PORT': os.getenv('DB_PORT', '5432')
-#     }
-# }
-
-if ENV_TYPE == 'local':
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': 'blog',
-            'USER': 'postgres',
-            'PASSWORD': os.getenv('DB_PASSWORD'),
-            'HOST': os.getenv('DB_HOST', 'localhost'),
-            'PORT': os.getenv('DB_PORT', '5432')
-        }
-    }
-
-
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {
-            'min_length': 8,
-        }
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
-
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
-LANGUAGE_CODE = 'ru-ru'
-
-TIME_ZONE = 'Europe/Moscow'
-
-USE_I18N = True
-
-USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = '/static/'
-
-# Настройки для предотвращения кеширования статических файлов в браузере
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 
 if ENV_TYPE == 'local':
     DATABASES = {
@@ -256,7 +133,77 @@ else:
         }
     }
 
-# Оптимизация кеширования
+# Оптимизация соединений с БД
+CONN_MAX_AGE = 60  # Сохраняем соединения с БД дольше
+
+# Password validation
+# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+# Internationalization
+# https://docs.djangoproject.com/en/5.2/topics/i18n/
+
+LANGUAGE_CODE = 'ru-ru'
+
+TIME_ZONE = 'Europe/Moscow'
+
+USE_I18N = True
+
+USE_TZ = True
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/5.2/howto/static-files/
+
+STATIC_URL = '/static/'
+
+if ENV_TYPE == 'local':
+    STATICFILES_DIRS = [
+        BASE_DIR / 'static',
+    ]
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+else:
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Настройки для предотвращения кеширования статических файлов в браузере
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
+# Создаем директорию для статических файлов при сборке
+if not os.path.exists(BASE_DIR / 'staticfiles'):
+    os.makedirs(BASE_DIR / 'staticfiles')
+
+# Media files
+MEDIA_URL = '/media/'
+DEFAULT_AVATAR_URL = '/img/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Настройка обработки медиа-файлов в production
+if not DEBUG:
+    from django.contrib.staticfiles.storage import StaticFilesStorage
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Оптимизация кеширования с Redis
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -264,14 +211,14 @@ CACHES = {
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'CONNECTION_POOL_KWARGS': {
-                'max_connections': 20,  # Увеличиваем количество соединений
+                'max_connections': 20,
                 'retry_on_timeout': True,
             },
-            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',  # Включаем сжатие
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
             'IGNORE_EXCEPTIONS': True,
         },
-        'KEY_PREFIX': 'blog',  # Префикс для избежания конфликта с другими приложениями
-        'TIMEOUT': 300,  # Время жизни кеша 5 минут
+        'KEY_PREFIX': 'blog',
+        'TIMEOUT': 300,  # 5 минут по умолчанию
     },
     'sessions': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -285,58 +232,33 @@ CACHES = {
             'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
         },
         'KEY_PREFIX': 'blog_sessions',
-        'TIMEOUT': 7200,  # Сессии живут 2 часа
+        'TIMEOUT': 7200,  # 2 часа
     }
 }
 
 # Используем отдельный кеш для сессий
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'sessions'
 
-# Оптимизация запросов к БД
-CONN_MAX_AGE = 60  # Сохраняем соединения с БД дольше
-
-if ENV_TYPE == 'local':
-    STATICFILES_DIRS = [
-        BASE_DIR / 'static',
-    ]
-    # В режиме разработки используем стандартный механизм
-    STATIC_ROOT = BASE_DIR / 'staticfiles'
-else:
-    STATIC_ROOT = BASE_DIR / 'staticfiles'
-    # STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-MEDIA_URL = '/media/'
-DEFAULT_AVATAR_URL = '/img/'
-
-# Корень для медиа-файлов
-MEDIA_ROOT = BASE_DIR / 'media'
-
-# Настройка обработки медиа-файлов в production
-if not DEBUG:
-    from django.contrib.staticfiles.storage import StaticFilesStorage
-    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
-
+# Messages
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
+
+# Crispy Forms
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
-# Настройки логирования
-from .logging_config import LOGGING
+# Security settings
+SECURE_SSL_REDIRECT = False
+SECURE_HSTS_SECONDS = 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
+# Настройки обработчиков ошибок
+handler404 = 'django.views.defaults.page_not_found'
+handler500 = 'blog_project.views.custom_server_error'
 
-# Read about sending email:
-# https://docs.djangoproject.com/en/3.2/topics/email/
-# Full list of email settings:
-# https://docs.djangoproject.com/en/3.2/ref/settings/#email
-# EMAIL_HOST = "localhost"
-# EMAIL_PORT = "25"
-
-# For debugging: python -m smtpd -n -c DebuggingServer localhost:25
-
+# Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
@@ -346,3 +268,5 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+# Настройки логирования
+from .logging_config import LOGGING

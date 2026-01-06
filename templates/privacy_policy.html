@@ -4,39 +4,109 @@
 {% block title %}Политика конфиденциальности{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-10">
-        <div class="card">
-            <div class="card-header">
-                <h2>Политика конфиденциальности</h2>
+<div class="legal-container">
+    <div class="legal-card">
+        <div class="legal-header">
+            <div class="legal-icon">
+                <i class="fas fa-shield-alt"></i>
             </div>
-            <div class="card-body">
-                <div class="mb-4">
-                    <a href="{% url 'blog:home' %}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-arrow-left"></i> На главную
-                    </a>
+            <h2>Политика конфиденциальности</h2>
+            <p class="legal-subtitle">Защита ваших персональных данных — наш приоритет</p>
+        </div>
+
+        <div class="legal-body">
+            <div class="back-button-top">
+                <a href="{% url 'blog:home' %}" class="btn-back-small">
+                    <i class="fas fa-arrow-left me-2"></i>На главную
+                </a>
+            </div>
+
+            <div class="legal-section">
+                <div class="section-number">1</div>
+                <div class="section-content">
+                    <h4>
+                        <i class="fas fa-database me-2"></i>
+                        Сбор информации
+                    </h4>
+                    <p>Мы собираем персональные данные, которые вы предоставляете при регистрации на сайте, включая email и имя пользователя. Эти данные необходимы для создания вашего аккаунта и обеспечения работы сервиса.</p>
                 </div>
-                
-                <h4>1. Сбор информации</h4>
-                <p>Мы собираем персональные данные, которые вы предоставляете при регистрации на сайте, включая email и имя пользователя.</p>
-                
-                <h4>2. Использование информации</h4>
-                <p>Собранная информация используется для обеспечения работы сервиса, улучшения пользовательского опыта и связи с вами при необходимости.</p>
-                
-                <h4>3. Защита информации</h4>
-                <p>Мы применяем современные методы защиты для сохранения ваших данных в безопасности от несанкционированного доступа.</p>
-                
-                <h4>4. Раскрытие информации</h4>
-                <p>Мы не передаем ваши персональные данные третьим лицам, за исключением случаев, предусмотренных законодательством.</p>
-                
-                <h4>5. Ваши права</h4>
-                <p>Вы имеете право на доступ к своим данным, их исправление или удаление. Для этого свяжитесь с нами через форму обратной связи.</p>
-                
-                <h4>6. Изменения в политике</h4>
-                <p>Мы оставляем за собой право вносить изменения в настоящую политику конфиденциальности. Все изменения будут опубликованы на этой странице.</p>
-                
-                <div class="text-muted mt-4">
-                    <p><strong>Последнее обновление:</strong> {% now "d.m.Y" %}</p>
+            </div>
+
+            <div class="legal-section">
+                <div class="section-number">2</div>
+                <div class="section-content">
+                    <h4>
+                        <i class="fas fa-cogs me-2"></i>
+                        Использование информации
+                    </h4>
+                    <p>Собранная информация используется для:</p>
+                    <ul class="legal-list">
+                        <li>Обеспечения работы сервиса</li>
+                        <li>Улучшения пользовательского опыта</li>
+                        <li>Связи с вами при необходимости</li>
+                        <li>Обеспечения безопасности вашего аккаунта</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="legal-section">
+                <div class="section-number">3</div>
+                <div class="section-content">
+                    <h4>
+                        <i class="fas fa-lock me-2"></i>
+                        Защита информации
+                    </h4>
+                    <p>Мы применяем современные методы защиты для сохранения ваших данных в безопасности от несанкционированного доступа, изменения, раскрытия или уничтожения. Ваши пароли хранятся в зашифрованном виде.</p>
+                </div>
+            </div>
+
+            <div class="legal-section">
+                <div class="section-number">4</div>
+                <div class="section-content">
+                    <h4>
+                        <i class="fas fa-user-shield me-2"></i>
+                        Раскрытие информации
+                    </h4>
+                    <p>Мы <strong>не передаем</strong> ваши персональные данные третьим лицам, за исключением случаев, предусмотренных законодательством Российской Федерации.</p>
+                </div>
+            </div>
+
+            <div class="legal-section">
+                <div class="section-number">5</div>
+                <div class="section-content">
+                    <h4>
+                        <i class="fas fa-hand-paper me-2"></i>
+                        Ваши права
+                    </h4>
+                    <p>Вы имеете следующие права:</p>
+                    <ul class="legal-list">
+                        <li>Право на доступ к своим персональным данным</li>
+                        <li>Право на исправление неточных данных</li>
+                        <li>Право на удаление своих данных</li>
+                        <li>Право на ограничение обработки данных</li>
+                    </ul>
+                    <p class="contact-info">
+                        <i class="fas fa-envelope me-2"></i>
+                        Для реализации своих прав свяжитесь с нами через форму обратной связи или Telegram.
+                    </p>
+                </div>
+            </div>
+
+            <div class="legal-section">
+                <div class="section-number">6</div>
+                <div class="section-content">
+                    <h4>
+                        <i class="fas fa-sync-alt me-2"></i>
+                        Изменения в политике
+                    </h4>
+                    <p>Мы оставляем за собой право вносить изменения в настоящую политику конфиденциальности. Все изменения будут опубликованы на этой странице с указанием даты последнего обновления.</p>
+                </div>
+            </div>
+
+            <div class="legal-footer">
+                <div class="update-info">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    <span><strong>Последнее обновление:</strong> {% now "d.m.Y" %}</span>
                 </div>
             </div>
         </div>

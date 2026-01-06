@@ -4,142 +4,164 @@
 {% block title %}Главная{% endblock %}
 
 {% block content %}
-
 <!-- Блок чата на главной странице -->
 <div class="row mb-4">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body">
-                <p>Присоединяйтесь к обсуждению! Общайтесь с другими пользователями в реальном времени.</p>
-                <a href="{% url 'blog:chat_room' 'general' %}" class="btn btn-primary">
-                    Войти в "Светлый чат"
-                </a>
+    <div class="col-lg-10 mx-auto">
+        <div class="hero-card">
+            <div class="d-flex align-items-center mb-3">
+                <i class="fas fa-comments fa-3x text-white me-3"></i>
+                <h3 class="mb-0">Светлый чат</h3>
             </div>
+            <p>Присоединяйтесь к обсуждению! Общайтесь с другими пользователями в реальном времени.</p>
+            <a href="{% url 'blog:chat_room' 'general' %}" class="btn">
+                <i class="fas fa-sign-in-alt me-2"></i>
+                Войти в чат
+            </a>
         </div>
     </div>
 </div>
 
 <!-- Форма поиска -->
 <div class="row mb-4">
-    <div class="col-md-8">
-        <form method="get" action="{% url 'blog:home' %}" class="mb-4">
-            <div class="input-group">
-                <input type="text" class="form-control" name="q" placeholder="Поиск постов..." value="{{ search_query }}">
-                <button class="btn btn-primary" type="submit">Найти</button>
-            </div>
-        </form>
+    <div class="col-lg-10 mx-auto">
+        <div class="search-wrapper">
+            <form method="get" action="{% url 'blog:home' %}">
+                <div class="input-group">
+                    <input type="text" class="form-control" name="q" placeholder="🔍 Поиск постов..." value="{{ search_query }}">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search me-2"></i>Найти
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
+<!-- Посты -->
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-lg-10 mx-auto">
         {% for post in posts %}
-        <div class="card mb-4">
+        <div class="post-card">
             {% if post.image %}
-            <img src="{{ post.image.url }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 300px; object-fit: cover;">
+            <img src="{{ post.image.url }}" class="card-img-top" alt="{{ post.title }}">
             {% endif %}
             <div class="card-body">
                 <h5 class="card-title">{{ post.title }}</h5>
                 <p class="card-text">{{ post.get_preview }}...</p>
-                <p class="card-text">
-                    <small class="text-muted">
-                        Автор: {{ post.author.email }} | 
+
+                <div class="post-meta">
+                    <span class="meta-item">
+                        <i class="fas fa-user"></i>
+                        <strong>{{ post.author.email }}</strong>
+                    </span>
+                    <span class="meta-item">
+                        <i class="fas fa-calendar-alt"></i>
                         {{ post.created_at|date:"d.m.Y H:i" }}
-                    </small>
-                </p>
-                {% if user.is_authenticated %}
-                <a href="{% url 'blog:post_detail' post.pk %}" class="btn btn-primary">
-                    Читать далее
-                </a>
-                {% else %}
-                <a href="{% url 'blog:login' %}" class="btn btn-primary">
-                    Войти для чтения
-                </a>
-                {% endif %}
-                
-                {% if user.is_staff or user.is_superuser %}
-                <div class="mt-2">
-                    <a href="{% url 'blog:post_edit' post.pk %}" class="btn btn-sm btn-outline-secondary me-2">
-                        Редактировать
-                    </a>
-                    <a href="{% url 'blog:post_delete' post.pk %}" class="btn btn-sm btn-outline-danger">
-                        Удалить
-                    </a>
+                    </span>
                 </div>
-                {% endif %}
+
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'blog:post_detail' post.pk %}" class="btn btn-primary">
+                        <i class="fas fa-book-open me-2"></i>Читать далее
+                    </a>
+                    {% else %}
+                    <a href="{% url 'blog:login' %}" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt me-2"></i>Войти для чтения
+                    </a>
+                    {% endif %}
+
+                    {% if user.is_staff or user.is_superuser %}
+                    <a href="{% url 'blog:post_edit' post.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-edit me-1"></i>Редактировать
+                    </a>
+                    <a href="{% url 'blog:post_delete' post.pk %}" class="btn btn-outline-danger">
+                        <i class="fas fa-trash-alt me-1"></i>Удалить
+                    </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
         {% endfor %}
 
         <!-- Пагинация -->
-        <div class="row justify-content-center align-items-center mt-3 mb-n3">
-            <nav aria-label="Page navigation example">
-                <ul class="pagination">
-                    {% if posts.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Первая</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ posts.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Предыдущая</a>
-                        </li>
-                    {% endif %}
+        {% if posts.paginator.num_pages > 1 %}
+        <nav aria-label="Навигация по страницам">
+            <ul class="pagination">
+                {% if posts.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                            <i class="fas fa-angle-double-left me-1"></i>Первая
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ posts.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                            <i class="fas fa-angle-left me-1"></i>Пред.
+                        </a>
+                    </li>
+                {% endif %}
 
-                    {% if posts.number > 3 %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">1</a>
-                        </li>
-                        {% if posts.number > 4 %}
-                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% if posts.number > 3 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">1</a>
+                    </li>
+                    {% if posts.number > 4 %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endif %}
+
+                {% for page_num in posts.paginator.page_range %}
+                    {% if page_num >= posts.number|add:'-2' and page_num <= posts.number|add:'2' %}
+                        {% if posts.number == page_num %}
+                            <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ page_num }}</a>
+                            </li>
                         {% endif %}
                     {% endif %}
+                {% endfor %}
 
-                    {% for page_num in posts.paginator.page_range %}
-                        {% if page_num >= posts.number|add:'-2' and page_num <= posts.number|add:'2' %}
-                            {% if posts.number == page_num %}
-                                <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
-                            {% else %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ page_num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ page_num }}</a>
-                                </li>
-                            {% endif %}
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if posts.number < posts.paginator.num_pages|add:'-2' %}
-                        {% if posts.number < posts.paginator.num_pages|add:'-3' %}
-                            <li class="page-item disabled"><span class="page-link">...</span></li>
-                        {% endif %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ posts.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ posts.paginator.num_pages }}</a>
-                        </li>
+                {% if posts.number < posts.paginator.num_pages|add:'-2' %}
+                    {% if posts.number < posts.paginator.num_pages|add:'-3' %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
                     {% endif %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ posts.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ posts.paginator.num_pages }}</a>
+                    </li>
+                {% endif %}
 
-                    {% if posts.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ posts.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Следующая</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ posts.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Последняя</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
+                {% if posts.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ posts.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                            След.<i class="fas fa-angle-right ms-1"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ posts.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                            Последняя<i class="fas fa-angle-double-right ms-1"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
 
+<!-- Панель администратора -->
 {% if user.is_staff or user.is_superuser %}
 <div class="row">
-    <div class="col-md-12 text-center">
-        <div class="card">
-            <div class="card-header text-center">
-                <h5 class="mb-0">Управление</h5>
-            </div>
-            <div class="card-body">
-                <a href="{% url 'blog:post_create' %}" class="btn btn-success">
-                    Создать пост
-                </a>
-            </div>
+    <div class="col-lg-10 mx-auto">
+        <div class="admin-panel text-center">
+            <h5>
+                <i class="fas fa-cog me-2"></i>
+                Панель управления
+            </h5>
+            <a href="{% url 'blog:post_create' %}" class="btn btn-success">
+                <i class="fas fa-plus-circle me-2"></i>
+                Создать новый пост
+            </a>
         </div>
     </div>
 </div>

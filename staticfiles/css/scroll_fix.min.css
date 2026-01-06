@@ -1,0 +1,2 @@
+/* ПАТЧ: Исправление мерцания при прокрутке */
+body,body::before,.post-card,.hero-card,.search-wrapper,.error-card,.card{will-change:transform;transform:translateZ(0);-webkit-transform:translateZ(0)}.post-card,.hero-card,.card{backface-visibility:hidden;-webkit-backface-visibility:hidden;transform-style:preserve-3d;-webkit-transform-style:preserve-3d;opacity:1;animation:none!important}@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

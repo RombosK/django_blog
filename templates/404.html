@@ -4,46 +4,50 @@
 {% block title %}Страница не найдена{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="text-center">
-            <div class="error-code" style="font-size: 120px; font-weight: bold; color: var(--dark-blue); margin: 30px 0;">
-                404
-            </div>
-            <h2>Страница не найдена</h2>
-            <p class="lead">К сожалению, запрашиваемая вами страница не существует или была перемещена.</p>
-            
-            <div class="mt-5">
-                <div class="card" style="max-width: 500px; margin: 0 auto;">
-                    <div class="card-body">
-                        <h5>Что можно сделать:</h5>
-                        <ul class="list-unstyled">
-                            <li class="mb-2"><i class="fas fa-arrow-right"></i> Проверить правильность написания адреса</li>
-                            <li class="mb-2"><i class="fas fa-arrow-right"></i> Вернуться на <a href="{% url 'home' %}">главную страницу</a></li>
-                            <li class="mb-2"><i class="fas fa-arrow-right"></i> Воспользоваться поиском по сайту</li>
-                            <li>Связаться с администрацией, если проблема сохраняется</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="mt-4">
-                <a href="{% url 'home' %}" class="btn btn-primary btn-lg">На главную</a>
-            </div>
+<div class="error-container">
+    <div class="error-decoration left">404</div>
+    <div class="error-decoration right">404</div>
+
+    <div class="error-card error-404">
+        <div class="error-icon-wrapper">
+            <div class="error-icon error-404-icon">404</div>
+            <div class="error-emoji">🔍</div>
         </div>
+
+        <h2 class="error-title">Страница не найдена</h2>
+        <p class="error-description">
+            К сожалению, запрашиваемая вами страница не существует или была перемещена. Но не переживайте, мы поможем вам найти нужное!
+        </p>
+
+        <div class="help-card help-404">
+            <h5>
+                <i class="fas fa-compass"></i>
+                Что можно сделать
+            </h5>
+            <ul class="help-list">
+                <li>
+                    <i class="fas fa-spell-check"></i>
+                    <span>Проверить правильность написания адреса</span>
+                </li>
+                <li>
+                    <i class="fas fa-home"></i>
+                    <span>Вернуться на <a href="{% url 'blog:home' %}">главную страницу</a></span>
+                </li>
+                <li>
+                    <i class="fas fa-search"></i>
+                    <span>Воспользоваться поиском по сайту</span>
+                </li>
+                <li>
+                    <i class="fas fa-envelope"></i>
+                    <span>Связаться с администрацией, если проблема сохраняется</span>
+                </li>
+            </ul>
+        </div>
+
+        <a href="{% url 'blog:home' %}" class="btn-home btn-404">
+            <i class="fas fa-arrow-left"></i>
+            Вернуться на главную
+        </a>
     </div>
 </div>
-
-<style>
-    .error-code {
-        text-shadow: 3px 3px 5px rgba(0,0,0,0.2);
-    }
-    
-    .fas {
-        color: var(--medium-blue);
-        margin-right: 10px;
-    }
-</style>
-
-<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 {% endblock %}

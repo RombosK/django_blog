@@ -4,97 +4,117 @@
 {% block title %}{{ post.title }}{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-8">
-        <div class="card mb-4">
-            {% if post.image %}
-            <img src="{{ post.image.url }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 400px; object-fit: cover;">
-            {% endif %}
-            <div class="card-body">
-                <h1 class="card-title">{{ post.title }}</h1>
-                {% if post.is_published %}
-                <p class="card-text">{{ post.content }}</p>
-                {% else %}
-                <p class="card-text text-muted">Содержание доступно только авторизованным пользователям с соответствующими правами.</p>
+<div class="post-detail-container">
+    <div class="row">
+        <!-- Основной контент на всю ширину -->
+        <div class="col-lg-10 mx-auto">
+            <article class="post-detail-card">
+                {% if post.image %}
+                <div class="post-detail-image">
+                    <img src="{{ post.image.url }}" alt="{{ post.title }}">
+                </div>
                 {% endif %}
-                <p class="card-text">
-                    <small class="text-muted">
-                        Автор: {{ post.author.email }} | 
-                        {{ post.created_at|date:"d.m.Y H:i" }}
+
+                <div class="post-detail-content">
+                    <h1 class="post-detail-title">{{ post.title }}</h1>
+
+                    <div class="post-meta-bar">
+                        <div class="meta-item">
+                            <i class="fas fa-user"></i>
+                            <span>{{ post.author.email }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>{{ post.created_at|date:"d.m.Y H:i" }}</span>
+                        </div>
                         {% if post.updated_at and post.updated_at != post.created_at %}
-                        (обновлено: {{ post.updated_at|date:"d.m.Y H:i" }})
+                        <div class="meta-item">
+                            <i class="fas fa-edit"></i>
+                            <span>Обновлено: {{ post.updated_at|date:"d.m.Y H:i" }}</span>
+                        </div>
                         {% endif %}
-                    </small>
-                </p>
-                
-                {% if user.is_staff or user.is_superuser %}
-                <div class="mt-3">
-                    <a href="{% url 'blog:post_edit' post.pk %}" class="btn btn-sm btn-outline-secondary me-2">
-                        Редактировать
-                    </a>
-                    <a href="{% url 'blog:post_delete' post.pk %}" class="btn btn-sm btn-outline-danger">
-                        Удалить
-                    </a>
-                </div>
-                {% endif %}
+                        <div class="meta-item">
+                            {% if post.is_published %}
+                                <span class="badge badge-success">
+                                    <i class="fas fa-check-circle me-1"></i>Опубликован
+                                </span>
+                            {% else %}
+                                <span class="badge badge-warning">
+                                    <i class="fas fa-clock me-1"></i>Черновик
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
 
-                <!-- Секция реакций -->
-                {% if user.is_authenticated %}
-                <div class="mt-3 d-flex align-items-center" style="flex-wrap: wrap; gap: 0.5rem;">
-                    <form method="post" action="{% url 'blog:toggle_reaction' post.pk %}" class="mb-0">
-                        {% csrf_token %}
-                        <input type="hidden" name="reaction_type" value="like">
-                        <button type="submit" class="btn btn-sm {% if user_reaction == 'like' %}btn-primary{% else %}btn-outline-primary{% endif %} d-flex align-items-center">
-                            <span class="me-1">👍</span>
-                            <span>{{ like_count }}</span>
-                        </button>
-                    </form>
-                    
-                    <form method="post" action="{% url 'blog:toggle_reaction' post.pk %}" class="mb-0">
-                        {% csrf_token %}
-                        <input type="hidden" name="reaction_type" value="dislike">
-                        <button type="submit" class="btn btn-sm {% if user_reaction == 'dislike' %}btn-danger{% else %}btn-outline-danger{% endif %} d-flex align-items-center">
-                            <span class="me-1">👎</span>
-                            <span>{{ dislike_count }}</span>
-                        </button>
-                    </form>
-                    
-                    <!-- Кнопка Обсудить для перехода в чат -->
-                    <a href="{% url 'blog:chat_room' post.slug|default:'general' %}" class="btn btn-sm btn-outline-info mb-0 d-flex align-items-center" style="color: #495057 !important;">
-                        <span class="me-1">💬</span>
-                        <span>Обсудить</span>
-                    </a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
+                    <div class="post-detail-text">
+                        {% if post.is_published %}
+                            {{ post.content|linebreaks }}
+                        {% else %}
+                            <div class="restricted-content">
+                                <i class="fas fa-lock fa-3x mb-3"></i>
+                                <p>Содержание доступно только авторизованным пользователям с соответствующими правами.</p>
+                            </div>
+                        {% endif %}
+                    </div>
 
-        <!-- Кнопка быстрого перехода на главную страницу -->
-        <div class="mt-3 text-center">
-            <a href="{% url 'blog:home' %}" class="btn btn-primary">
-                <i class="fas fa-home me-1"></i>
-                Вернуться на главную
-            </a>
-        </div>
-    </div>
+                    <!-- Реакции -->
+                    {% if user.is_authenticated %}
+                    <div class="reactions-section">
+                        <h6 class="reactions-title">
+                            <i class="fas fa-heart me-2"></i>Ваша реакция
+                        </h6>
+                        <div class="reactions-buttons">
+                            <form method="post" action="{% url 'blog:toggle_reaction' post.pk %}" class="reaction-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="reaction_type" value="like">
+                                <button type="submit" class="btn-reaction btn-like {% if user_reaction == 'like' %}active{% endif %}">
+                                    <span class="reaction-icon">👍</span>
+                                    <span class="reaction-count">{{ like_count }}</span>
+                                </button>
+                            </form>
 
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5>Информация</h5>
-            </div>
-            <div class="card-body">
-                <p><strong>Статус:</strong>
-                    {% if post.is_published %}
-                    <span class="badge bg-success">Опубликован</span>
-                    {% else %}
-                    <span class="badge bg-warning text-dark">Черновик</span>
+                            <form method="post" action="{% url 'blog:toggle_reaction' post.pk %}" class="reaction-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="reaction_type" value="dislike">
+                                <button type="submit" class="btn-reaction btn-dislike {% if user_reaction == 'dislike' %}active{% endif %}">
+                                    <span class="reaction-icon">👎</span>
+                                    <span class="reaction-count">{{ dislike_count }}</span>
+                                </button>
+                            </form>
+
+                            <a href="{% url 'blog:chat_room' post.slug|default:'general' %}" class="btn-reaction btn-discuss">
+                                <span class="reaction-icon">💬</span>
+                                <span>Обсудить</span>
+                            </a>
+                        </div>
+                    </div>
                     {% endif %}
-                </p>
-                <p><strong>Дата создания:</strong><br>{{ post.created_at|date:"d.m.Y H:i" }}</p>
-                {% if post.updated_at and post.updated_at != post.created_at %}
-                <p><strong>Дата обновления:</strong><br>{{ post.updated_at|date:"d.m.Y H:i" }}</p>
-                {% endif %}
+
+                    <!-- Управление для админов -->
+                    {% if user.is_staff or user.is_superuser %}
+                    <div class="admin-actions">
+                        <h6 class="admin-title">
+                            <i class="fas fa-cog me-2"></i>Управление
+                        </h6>
+                        <div class="admin-buttons">
+                            <a href="{% url 'blog:post_edit' post.pk %}" class="btn-admin btn-edit">
+                                <i class="fas fa-edit me-2"></i>Редактировать
+                            </a>
+                            <a href="{% url 'blog:post_delete' post.pk %}" class="btn-admin btn-delete">
+                                <i class="fas fa-trash-alt me-2"></i>Удалить
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </article>
+
+            <!-- Кнопка возврата -->
+            <div class="back-button-section">
+                <a href="{% url 'blog:home' %}" class="btn-back">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Вернуться на главную
+                </a>
             </div>
         </div>
     </div>

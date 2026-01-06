@@ -4,54 +4,159 @@
 {% block title %}{% if post %}Редактировать пост{% else %}Создать пост{% endif %}{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h3>{% if post %}Редактировать пост{% else %}Создать пост{% endif %}</h3>
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <div class="form-icon">
+                <i class="fas fa-{% if post %}edit{% else %}plus-circle{% endif %}"></i>
             </div>
-            <div class="card-body">
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    
-                    <div class="mb-3">
-                        <label for="title" class="form-label">Заголовок</label>
-                        <input type="text" class="form-control" id="title" name="title" 
-                               value="{% if post %}{{ post.title }}{% elif title %}{{ title }}{% endif %}" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="content" class="form-label">Содержание</label>
-                        <textarea class="form-control" id="content" name="content" rows="10" required>
-{% if post %}{{ post.content }}{% elif content %}{{ content }}{% endif %}</textarea>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="image" class="form-label">Изображение</label>
-                        <input type="file" class="form-control" id="image" name="image" 
-                               accept="image/*">
-                        {% if post and post.image %}
-                        <div class="mt-2">
-                            <img src="{{ post.image.url }}" alt="{{ post.title }}" 
-                                 style="max-height: 200px; object-fit: cover;">
-                            <small class="text-muted d-block mt-1">Текущее изображение</small>
+            <h3>{% if post %}Редактировать пост{% else %}Создать новый пост{% endif %}</h3>
+            <p class="form-subtitle">Заполните все поля для публикации</p>
+        </div>
+
+        <div class="form-body">
+            <form method="post" enctype="multipart/form-data" id="post-form">
+                {% csrf_token %}
+
+                <!-- Заголовок -->
+                <div class="form-group">
+                    <label for="title" class="form-label">
+                        <i class="fas fa-heading me-2"></i>
+                        Заголовок поста
+                    </label>
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        id="title" 
+                        name="title" 
+                        value="{% if post %}{{ post.title }}{% elif title %}{{ title }}{% endif %}" 
+                        placeholder="Введите заголовок..."
+                        required
+                        maxlength="200"
+                    >
+                    <div class="form-hint">Максимум 200 символов</div>
+                </div>
+
+                <!-- Содержание -->
+                <div class="form-group">
+                    <label for="content" class="form-label">
+                        <i class="fas fa-align-left me-2"></i>
+                        Содержание
+                    </label>
+                    <textarea 
+                        class="form-control" 
+                        id="content" 
+                        name="content" 
+                        rows="12" 
+                        placeholder="Напишите текст поста..."
+                        required
+                    >{% if post %}{{ post.content }}{% elif content %}{{ content }}{% endif %}</textarea>
+                    <div class="form-hint">Поддерживается форматирование текста</div>
+                </div>
+
+                <!-- Изображение -->
+                <div class="form-group">
+                    <label for="image" class="form-label">
+                        <i class="fas fa-image me-2"></i>
+                        Изображение
+                    </label>
+                    <div class="image-upload-wrapper">
+                        <input 
+                            type="file" 
+                            class="form-control" 
+                            id="image" 
+                            name="image" 
+                            accept="image/*"
+                        >
+                        <div class="upload-hint">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>PNG, JPG, GIF до 5MB</span>
                         </div>
-                        {% endif %}
                     </div>
-                    
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="is_published" name="is_published"
-                               {% if post %}{% if post.is_published %}checked{% endif %}{% elif is_published %}checked{% endif %}>
-                        <label class="form-check-label" for="is_published">Опубликовать</label>
+
+                    {% if post and post.image %}
+                    <div class="current-image">
+                        <div class="current-image-label">Текущее изображение:</div>
+                        <img src="{{ post.image.url }}" alt="{{ post.title }}">
                     </div>
-                    
-                    <button type="submit" class="btn btn-primary">
-                        {% if post %}Обновить{% else %}Создать{% endif %}
+                    {% endif %}
+                </div>
+
+                <!-- Публикация -->
+                <div class="form-group">
+                    <div class="publish-toggle">
+                        <input 
+                            type="checkbox" 
+                            class="form-check-input" 
+                            id="is_published" 
+                            name="is_published"
+                            {% if post %}{% if post.is_published %}checked{% endif %}{% elif is_published %}checked{% endif %}
+                        >
+                        <label class="form-check-label" for="is_published">
+                            <div class="toggle-content">
+                                <i class="fas fa-globe"></i>
+                                <div>
+                                    <strong>Опубликовать пост</strong>
+                                    <small>Сделать пост доступным для всех пользователей</small>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Кнопки -->
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">
+                        <i class="fas fa-{% if post %}check{% else %}paper-plane{% endif %} me-2"></i>
+                        {% if post %}Обновить пост{% else %}Создать пост{% endif %}
                     </button>
-                    <a href="{% url 'blog:home' %}" class="btn btn-secondary">Отмена</a>
-                </form>
-            </div>
+                    <a href="{% url 'blog:home' %}" class="btn-cancel">
+                        <i class="fas fa-times me-2"></i>
+                        Отмена
+                    </a>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+
+<script>
+    // Предпросмотр изображения
+    document.getElementById('image').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let preview = document.querySelector('.image-preview');
+                if (!preview) {
+                    preview = document.createElement('div');
+                    preview.className = 'image-preview';
+                    document.querySelector('.image-upload-wrapper').appendChild(preview);
+                }
+                preview.innerHTML = '<img src="' + e.target.result + '" alt="Preview"><div class="preview-label">Предпросмотр</div>';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Счётчик символов для заголовка
+    const titleInput = document.getElementById('title');
+    const createCounter = () => {
+        const counter = document.createElement('div');
+        counter.className = 'char-counter';
+        counter.textContent = titleInput.value.length + ' / 200';
+        titleInput.parentElement.appendChild(counter);
+        return counter;
+    };
+
+    const counter = createCounter();
+    titleInput.addEventListener('input', function() {
+        counter.textContent = this.value.length + ' / 200';
+        if (this.value.length > 180) {
+            counter.style.color = '#ef4444';
+        } else {
+            counter.style.color = '#64748b';
+        }
+    });
+</script>
 {% endblock %}

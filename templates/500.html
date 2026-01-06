@@ -4,46 +4,50 @@
 {% block title %}Ошибка сервера{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="text-center">
-            <div class="error-code" style="font-size: 120px; font-weight: bold; color: var(--dark-blue); margin: 30px 0;">
-                500
-            </div>
-            <h2>Ошибка сервера</h2>
-            <p class="lead">Произошла внутренняя ошибка сервера. Мы уже работаем над ее исправлением.</p>
-            
-            <div class="mt-5">
-                <div class="card" style="max-width: 500px; margin: 0 auto;">
-                    <div class="card-body">
-                        <h5>Что можно сделать:</h5>
-                        <ul class="list-unstyled">
-                            <li class="mb-2"><i class="fas fa-arrow-right"></i> Попробовать обновить страницу</li>
-                            <li class="mb-2"><i class="fas fa-arrow-right"></i> Вернуться на <a href="{% url 'blog:home' %}">главную страницу</a></li>
-                            <li class="mb-2"><i class="fas fa-arrow-right"></i> Повторить попытку позже</li>
-                            <li>Связаться с администрацией, если проблема сохраняется</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="mt-4">
-                <a href="{% url 'blog:home' %}" class="btn btn-primary btn-lg">На главную</a>
-            </div>
+<div class="error-container">
+    <div class="error-decoration left">500</div>
+    <div class="error-decoration right">500</div>
+
+    <div class="error-card">
+        <div class="error-icon-wrapper">
+            <div class="error-icon">500</div>
+            <div class="error-emoji">⚡</div>
         </div>
+
+        <h2 class="error-title">Ошибка сервера</h2>
+        <p class="error-description">
+            Произошла внутренняя ошибка сервера. Не волнуйтесь, наша команда уже работает над её исправлением!
+        </p>
+
+        <div class="help-card">
+            <h5>
+                <i class="fas fa-lightbulb"></i>
+                Что можно сделать
+            </h5>
+            <ul class="help-list">
+                <li>
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Попробовать обновить страницу через несколько минут</span>
+                </li>
+                <li>
+                    <i class="fas fa-home"></i>
+                    <span>Вернуться на <a href="{% url 'blog:home' %}">главную страницу</a></span>
+                </li>
+                <li>
+                    <i class="fas fa-clock"></i>
+                    <span>Повторить попытку позже</span>
+                </li>
+                <li>
+                    <i class="fas fa-envelope"></i>
+                    <span>Связаться с администрацией, если проблема сохраняется</span>
+                </li>
+            </ul>
+        </div>
+
+        <a href="{% url 'blog:home' %}" class="btn-home">
+            <i class="fas fa-arrow-left"></i>
+            Вернуться на главную
+        </a>
     </div>
 </div>
-
-<style>
-    .error-code {
-        text-shadow: 3px 3px 5px rgba(0,0,0,0.2);
-    }
-    
-    .fas {
-        color: var(--medium-blue);
-        margin-right: 10px;
-    }
-</style>
-
-<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 {% endblock %}

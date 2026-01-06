@@ -4,58 +4,125 @@
 {% block title %}Регистрация{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h3>Регистрация</h3>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-icon">
+                <i class="fas fa-user-plus"></i>
             </div>
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+            <h3>Регистрация</h3>
+            <p class="auth-subtitle">Создайте аккаунт для доступа ко всем возможностям</p>
+        </div>
+
+        <div class="auth-body">
+            <form method="post" class="auth-form">
+                {% csrf_token %}
+
+                <!-- Email -->
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                        <i class="fas fa-envelope me-2"></i>
+                        Email
+                    </label>
+                    <div class="input-wrapper">
                         {{ form.email }}
-                        {% if form.email.errors %}
-                            <div class="text-danger">{{ form.email.errors }}</div>
-                        {% endif %}
                     </div>
-                    <div class="mb-3">
-                        <label for="{{ form.username.id_for_label }}" class="form-label">Имя пользователя</label>
+                    {% if form.email.errors %}
+                        <div class="form-error">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            {{ form.email.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Имя пользователя -->
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}" class="form-label">
+                        <i class="fas fa-user me-2"></i>
+                        Имя пользователя
+                    </label>
+                    <div class="input-wrapper">
                         {{ form.username }}
-                        {% if form.username.errors %}
-                            <div class="text-danger">{{ form.username.errors }}</div>
-                        {% endif %}
                     </div>
-                    <div class="mb-3">
-                        <label for="{{ form.password1.id_for_label }}" class="form-label">Пароль</label>
+                    {% if form.username.errors %}
+                        <div class="form-error">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            {{ form.username.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Пароль -->
+                <div class="form-group">
+                    <label for="{{ form.password1.id_for_label }}" class="form-label">
+                        <i class="fas fa-lock me-2"></i>
+                        Пароль
+                    </label>
+                    <div class="input-wrapper">
                         {{ form.password1 }}
-                        {% if form.password1.errors %}
-                            <div class="text-danger">{{ form.password1.errors }}</div>
-                        {% endif %}
                     </div>
-                    <div class="mb-3">
-                        <label for="{{ form.password2.id_for_label }}" class="form-label">Подтверждение пароля</label>
+                    {% if form.password1.errors %}
+                        <div class="form-error">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            {{ form.password1.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Подтверждение пароля -->
+                <div class="form-group">
+                    <label for="{{ form.password2.id_for_label }}" class="form-label">
+                        <i class="fas fa-lock me-2"></i>
+                        Подтверждение пароля
+                    </label>
+                    <div class="input-wrapper">
                         {{ form.password2 }}
-                        {% if form.password2.errors %}
-                            <div class="text-danger">{{ form.password2.errors }}</div>
-                        {% endif %}
                     </div>
-                    <div class="mb-3 form-check">
+                    {% if form.password2.errors %}
+                        <div class="form-error">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            {{ form.password2.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Согласие с условиями -->
+                <div class="form-group">
+                    <div class="terms-agreement">
                         {{ form.agree_to_terms }}
                         <label class="form-check-label" for="{{ form.agree_to_terms.id_for_label }}">
-                            Я согласен с <a href="{% url 'terms_of_service' %}" target="_blank">условиями использования</a> и <a href="{% url 'privacy_policy' %}" target="_blank">политикой конфиденциальности</a>
+                            <i class="fas fa-file-contract me-2"></i>
+                            <span>
+                                Я согласен с 
+                                <a href="{% url 'terms_of_service' %}" target="_blank">условиями использования</a> 
+                                и 
+                                <a href="{% url 'privacy_policy' %}" target="_blank">политикой конфиденциальности</a>
+                            </span>
                         </label>
-                        {% if form.agree_to_terms.errors %}
-                            <div class="text-danger">{{ form.agree_to_terms.errors }}</div>
-                        {% endif %}
                     </div>
-                    <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
-                </form>
-                <div class="mt-3">
-                    <p>Уже есть аккаунт? <a href="{% url 'blog:login' %}">Войти</a></p>
+                    {% if form.agree_to_terms.errors %}
+                        <div class="form-error">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            {{ form.agree_to_terms.errors.0 }}
+                        </div>
+                    {% endif %}
                 </div>
-            </div>
+
+                <!-- Кнопка регистрации -->
+                <button type="submit" class="btn-auth btn-register-submit">
+                    <i class="fas fa-user-plus me-2"></i>
+                    Зарегистрироваться
+                </button>
+            </form>
+        </div>
+
+        <!-- Вход -->
+        <div class="auth-footer">
+            <p>Уже есть аккаунт?</p>
+            <a href="{% url 'blog:login' %}" class="btn-login-link">
+                <i class="fas fa-sign-in-alt me-2"></i>
+                Войти
+            </a>
         </div>
     </div>
 </div>

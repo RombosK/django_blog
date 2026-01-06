@@ -1,40 +1,39 @@
 import json
-from asgiref.sync import async_to_sync
-from channels.generic.websocket import WebsocketConsumer
-from django.contrib.auth.models import User
+from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
 from blog.models import Message, ChatRoom
 from django.core.cache import cache
 from django.conf import settings
 import logging
 from django.utils import timezone
+from blog.moderation_utils import moderate_message, record_user_message
+import re
 
 logger = logging.getLogger(__name__)
 
-class OptimizedChatConsumer(WebsocketConsumer):
+class OptimizedChatConsumer(AsyncWebsocketConsumer):
     """
     Оптимизированная версия чат-консьюмера с улучшенной производительностью
     """
-    def connect(self):
+    async def connect(self):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         # Преобразуем имя комнаты в допустимый формат для группы
-        import re
         safe_room_name = re.sub(r'[^a-zA-Z0-9\-_\.]', '', self.room_name)
         if not safe_room_name:
             safe_room_name = 'default'
         self.room_group_name = f'chat_{safe_room_name}'
 
         # Присоединяемся к группе комнаты
-        async_to_sync(self.channel_layer.group_add)(
+        await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
 
-        self.accept()
+        await self.accept()
 
         # Отправляем сообщение о подключении
-        from django.utils import timezone
         localized_time = timezone.localtime(timezone.now())
-        async_to_sync(self.channel_layer.group_send)(
+        await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'chat_message',
@@ -44,21 +43,21 @@ class OptimizedChatConsumer(WebsocketConsumer):
             }
         )
 
-    def disconnect(self, close_code):
+    async def disconnect(self, close_code):
         # Покидаем группу комнаты
-        async_to_sync(self.channel_layer.group_discard)(
+        await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
 
-    def receive(self, text_data):
+    async def receive(self, text_data):
         try:
             text_data_json = json.loads(text_data)
             message = text_data_json.get('message', '')
 
             # Проверяем, что пользователь аутентифицирован
             if not self.scope['user'].is_authenticated:
-                self.send(text_data=json.dumps({
+                await self.send(text_data=json.dumps({
                     'error': 'Authentication required'
                 }))
                 return
@@ -66,29 +65,46 @@ class OptimizedChatConsumer(WebsocketConsumer):
             username = self.scope['user'].username
 
             # Получаем комнату с минимальным количеством запросов
-            room, created = ChatRoom.objects.get_or_create(
-                name=self.room_name,
-                defaults={'topic': f'Чат для {self.room_name}'}
-            )
+            room = await self.get_or_create_room()
 
             # Обработка сообщения
             if message and message != '/join':
                 # Ограничиваем длину сообщения
                 message_content = message[:1000]
-                
+
+                # Проверяем сообщение с помощью автоматической модерации
+                is_blocked, reason = await database_sync_to_async(moderate_message)(
+                    self.scope['user'],
+                    room,
+                    message_content
+                )
+
+                if is_blocked:
+                    # Отправляем пользователю уведомление о блокировке
+                    await self.send(text_data=json.dumps({
+                        'error': f'Ваше сообщение было заблокировано: {reason}',
+                        'moderation_blocked': True
+                    }))
+                    return
+
                 # Создаем сообщение с минимальным количеством операций
-                new_message = Message.objects.create(
+                new_message = await database_sync_to_async(Message.objects.create)(
                     room=room,
                     user=self.scope['user'],
-                    content=message_content
+                    content=message_content,
+                    is_moderated=True  # Помечаем, что сообщение прошло модерацию
+                )
+
+                # Записываем факт отправки сообщения для отслеживания частоты
+                await database_sync_to_async(record_user_message)(
+                    self.scope['user'],
+                    room
                 )
 
                 # Отправляем сообщение в группу комнаты
-                from django.utils import timezone
-                from datetime import datetime
                 # Используем локализованное время для корректного отображения с учетом часового пояса
                 localized_time = timezone.localtime(timezone.now())
-                async_to_sync(self.channel_layer.group_send)(
+                await self.channel_layer.group_send(
                     self.room_group_name,
                     {
                         'type': 'chat_message',
@@ -98,23 +114,32 @@ class OptimizedChatConsumer(WebsocketConsumer):
                     }
                 )
         except json.JSONDecodeError:
-            self.send(text_data=json.dumps({
+            await self.send(text_data=json.dumps({
                 'error': 'Invalid JSON'
             }))
         except Exception as e:
             logger.error(f"Error in chat consumer: {str(e)}")
-            self.send(text_data=json.dumps({
+            await self.send(text_data=json.dumps({
                 'error': 'Server error'
             }))
 
-    def chat_message(self, event):
+    async def chat_message(self, event):
         message = event['message']
         username = event['username']
         timestamp = event.get('timestamp', timezone.now().strftime('%H:%M'))
 
         # Отправляем сообщение клиенту с текущим временем
-        self.send(text_data=json.dumps({
+        await self.send(text_data=json.dumps({
             'message': message,
             'username': username,
             'timestamp': timestamp
         }))
+
+    @database_sync_to_async
+    def get_or_create_room(self):
+        """Асинхронный метод для получения или создания комнаты"""
+        room, created = ChatRoom.objects.get_or_create(
+            name=self.room_name,
+            defaults={'topic': f'Чат для {self.room_name}'}
+        )
+        return room
