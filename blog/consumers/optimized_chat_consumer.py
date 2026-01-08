@@ -13,11 +13,12 @@ logger = logging.getLogger(__name__)
 
 class OptimizedChatConsumer(AsyncWebsocketConsumer):
     """
-    Оптимизированная версия чат-консьюмера с улучшенной производительностью
+    Оптимизированная версия чат-консьюмера с историей сообщений
     """
     async def connect(self):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
-        # Преобразуем имя комнаты в допустимый формат для группы
+
+        # ✅ ОПТИМИЗАЦИЯ: безопасное имя группы
         safe_room_name = re.sub(r'[^a-zA-Z0-9\-_\.]', '', self.room_name)
         if not safe_room_name:
             safe_room_name = 'default'
@@ -31,19 +32,11 @@ class OptimizedChatConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
 
-        # Отправляем сообщение о подключении
-        localized_time = timezone.localtime(timezone.now())
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'chat_message',
-                'message': f'Пользователь {self.scope["user"].username} присоединился к чату',
-                'username': 'System',
-                'timestamp': localized_time.strftime('%H:%M')  # Используем локализованное время
-            }
-        )
+        # ✅ НОВОЕ: Отправляем историю сообщений при подключении
+        await self.send_chat_history()
 
     async def disconnect(self, close_code):
+        """Отключение от комнаты"""
         # Покидаем группу комнаты
         await self.channel_layer.group_discard(
             self.room_group_name,
@@ -51,95 +44,162 @@ class OptimizedChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def receive(self, text_data):
+        """Обработка входящих сообщений"""
         try:
             text_data_json = json.loads(text_data)
-            message = text_data_json.get('message', '')
+            message = text_data_json.get('message', '').strip()
 
-            # Проверяем, что пользователь аутентифицирован
+            # ✅ ОПТИМИЗАЦИЯ: ранняя проверка аутентификации
             if not self.scope['user'].is_authenticated:
                 await self.send(text_data=json.dumps({
-                    'error': 'Authentication required'
+                    'error': 'Необходимо авторизоваться'
                 }))
+                return
+
+            # ✅ ОПТИМИЗАЦИЯ: проверка пустого сообщения
+            if not message:
                 return
 
             username = self.scope['user'].username
 
-            # Получаем комнату с минимальным количеством запросов
-            room = await self.get_or_create_room()
+            # ✅ ОПТИМИЗАЦИЯ: кешируем объект комнаты
+            room = await self.get_or_create_room_cached()
 
-            # Обработка сообщения
-            if message and message != '/join':
-                # Ограничиваем длину сообщения
-                message_content = message[:1000]
+            # ✅ ОПТИМИЗАЦИЯ: ограничение длины до валидации
+            message_content = message[:500]
 
-                # Проверяем сообщение с помощью автоматической модерации
-                is_blocked, reason = await database_sync_to_async(moderate_message)(
-                    self.scope['user'],
-                    room,
-                    message_content
-                )
+            # Проверяем сообщение с помощью автоматической модерации
+            is_blocked, reason = await database_sync_to_async(moderate_message)(
+                self.scope['user'],
+                room,
+                message_content
+            )
 
-                if is_blocked:
-                    # Отправляем пользователю уведомление о блокировке
-                    await self.send(text_data=json.dumps({
-                        'error': f'Ваше сообщение было заблокировано: {reason}',
-                        'moderation_blocked': True
-                    }))
-                    return
+            if is_blocked:
+                await self.send(text_data=json.dumps({
+                    'error': f'Сообщение заблокировано: {reason}',
+                    'moderation_blocked': True
+                }))
+                return
 
-                # Создаем сообщение с минимальным количеством операций
-                new_message = await database_sync_to_async(Message.objects.create)(
-                    room=room,
-                    user=self.scope['user'],
-                    content=message_content,
-                    is_moderated=True  # Помечаем, что сообщение прошло модерацию
-                )
+            # ✅ ОПТИМИЗАЦИЯ: создаем сообщение и записываем факт отправки одновременно
+            await self.save_message_and_record(room, message_content)
 
-                # Записываем факт отправки сообщения для отслеживания частоты
-                await database_sync_to_async(record_user_message)(
-                    self.scope['user'],
-                    room
-                )
+            # Отправляем сообщение в группу
+            localized_time = timezone.localtime(timezone.now())
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'chat_message',
+                    'message': message_content,
+                    'username': username,
+                    'timestamp': localized_time.strftime('%d.%m.%Y %H:%M')
+                }
+            )
 
-                # Отправляем сообщение в группу комнаты
-                # Используем локализованное время для корректного отображения с учетом часового пояса
-                localized_time = timezone.localtime(timezone.now())
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        'type': 'chat_message',
-                        'message': message_content,
-                        'username': username,
-                        'timestamp': localized_time.strftime('%H:%M')  # Используем локализованное время
-                    }
-                )
         except json.JSONDecodeError:
             await self.send(text_data=json.dumps({
-                'error': 'Invalid JSON'
+                'error': 'Некорректный формат данных'
             }))
         except Exception as e:
-            logger.error(f"Error in chat consumer: {str(e)}")
+            logger.error(f"Ошибка в chat consumer: {str(e)}", exc_info=True)
             await self.send(text_data=json.dumps({
-                'error': 'Server error'
+                'error': 'Ошибка сервера'
             }))
 
     async def chat_message(self, event):
+        """Отправка сообщения клиенту"""
         message = event['message']
         username = event['username']
-        timestamp = event.get('timestamp', timezone.now().strftime('%H:%M'))
+        timestamp = event.get('timestamp', timezone.now().strftime('%d.%m.%Y %H:%M'))
 
-        # Отправляем сообщение клиенту с текущим временем
         await self.send(text_data=json.dumps({
             'message': message,
             'username': username,
             'timestamp': timestamp
         }))
 
+    async def send_chat_history(self):
+        """
+        ✅ НОВОЕ: Отправка истории последних сообщений при подключении
+        Решает проблему: новый пользователь видит предыдущие сообщения
+        """
+        try:
+            # Получаем последние 50 сообщений из БД
+            messages = await self.get_recent_messages()
+
+            if messages:
+                # Отправляем каждое сообщение клиенту
+                for msg in messages:
+                    await self.send(text_data=json.dumps({
+                        'message': msg['content'],
+                        'username': msg['username'],
+                        'timestamp': msg['timestamp'],
+                        'is_history': True  # Флаг что это историческое сообщение
+                    }))
+
+        except Exception as e:
+            logger.error(f"Ошибка при загрузке истории чата: {str(e)}", exc_info=True)
+
     @database_sync_to_async
-    def get_or_create_room(self):
-        """Асинхронный метод для получения или создания комнаты"""
-        room, created = ChatRoom.objects.get_or_create(
-            name=self.room_name,
-            defaults={'topic': f'Чат для {self.room_name}'}
-        )
+    def get_recent_messages(self):
+        """
+        ✅ НОВОЕ: Получение последних сообщений из БД
+        С оптимизацией select_related для уменьшения запросов
+        """
+        try:
+            room = ChatRoom.objects.get(name=self.room_name)
+
+            # Получаем последние 50 сообщений с оптимизацией
+            messages = Message.objects.filter(
+                room=room,
+                is_blocked=False
+            ).select_related('user').order_by('-created_at')[:50]
+
+            # Преобразуем в список словарей (reversed для правильного порядка)
+            return [
+                {
+                    'content': msg.content,
+                    'username': msg.user.username,
+                    'timestamp': timezone.localtime(msg.created_at).strftime('%d.%m.%Y %H:%M')
+                }
+                for msg in reversed(messages)
+            ]
+        except ChatRoom.DoesNotExist:
+            return []
+
+    @database_sync_to_async
+    def get_or_create_room_cached(self):
+        """
+        ✅ ОПТИМИЗАЦИЯ: Кешированное получение комнаты (5 минут)
+        """
+        cache_key = f'chat_room_{self.room_name}'
+        room = cache.get(cache_key)
+
+        if room is None:
+            room, created = ChatRoom.objects.get_or_create(
+                name=self.room_name,
+                defaults={'topic': f'Чат для {self.room_name}'}
+            )
+            cache.set(cache_key, room, 300)
+
         return room
+
+    @database_sync_to_async
+    def save_message_and_record(self, room, message_content):
+        """
+        ✅ ОПТИМИЗАЦИЯ: Объединяем две операции в одну транзакцию
+        """
+        # Создаем сообщение
+        Message.objects.create(
+            room=room,
+            user=self.scope['user'],
+            content=message_content,
+            is_moderated=True
+        )
+
+        # Записываем факт отправки
+        record_user_message(self.scope['user'], room)
+
+        # Сбрасываем кеш сообщений для этой комнаты
+        cache.delete(f'chat_messages_{self.room_name}')

@@ -1,215 +1,500 @@
 {% extends 'base.html' %}
+
 {% load static %}
 
 {% block title %}Чат: {{ display_name }}{% endblock %}
 
 {% block content %}
 <div class="chat-container">
-    <div class="chat-card">
-        <div class="chat-header">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-comments fa-2x text-white me-3"></i>
-                <div>
-                    <h5 class="mb-0">{{ display_name }}</h5>
-                    <small class="text-white-50">
-                        <i class="fas fa-circle text-success me-1" style="font-size: 0.6rem;"></i>
-                        Онлайн
-                    </small>
+    <div class="chat-header">
+        <h1>💬 {{ display_name }}</h1>
+        <p class="chat-description">{{ room.topic|default:"Общий чат" }}</p>
+    </div>
+
+    <div id="chat-messages" class="chat-messages">
+        {% for message in messages %}
+            <div class="message {% if message.user.username == user.username %}my-message{% endif %}">
+                <div class="message-header">
+                    <strong>{{ message.user.username }}</strong>
+                    <span class="message-time">{{ message.created_at|date:"H:i" }}</span>
                 </div>
+                <div class="message-content">{{ message.content }}</div>
             </div>
-            <a href="{% url 'blog:home' %}" class="btn btn-light btn-sm">
-                <i class="fas fa-arrow-left me-1"></i>Назад
-            </a>
-        </div>
-
-        <div class="chat-body">
-            <!-- Форма поиска -->
-            <div class="chat-search">
-                <form method="get" action="{% url 'blog:chat_room' room_name %}">
-                    <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="fas fa-search"></i>
-                        </span>
-                        <input type="text" class="form-control" name="q" placeholder="Поиск по сообщениям..." value="{{ search_query }}">
-                        <button class="btn btn-primary" type="submit">Найти</button>
-                    </div>
-                </form>
+        {% empty %}
+            <div class="no-messages">
+                <p>📭 Пока нет сообщений. Начните общение!</p>
             </div>
+        {% endfor %}
+    </div>
 
-            <!-- Сообщения -->
-            <div class="chat-messages" id="chat-messages" data-room-name="{{ room_name }}">
-                {% for message in messages %}
-                <div class="message-item {% if message.user_username == user.username %}message-own{% endif %}">
-                    <div class="message-avatar">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                    <div class="message-content">
-                        <div class="message-header">
-                            <strong class="message-username">{{ message.user_username }}</strong>
-                            <small class="message-time">{{ message.created_at|date:"d.m.Y H:i" }}</small>
-                        </div>
-                        <p class="message-text">{{ message.content }}</p>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+    <!-- ✅ ФОРМА С EMOJI КНОПКОЙ -->
+    <form id="message-form" class="message-form">
+        <button type="button" class="btn-emoji" id="emoji-button" title="Эмодзи">
+            😊
+        </button>
+        <input 
+            type="text" 
+            id="chat-message-input" 
+            placeholder="Введите сообщение..." 
+            maxlength="1000"
+            autocomplete="off"
+        >
+        <button type="submit" id="chat-message-submit" class="btn-send">
+            <span>📤</span>
+            Отправить
+        </button>
+    </form>
 
-            <!-- Пагинация -->
-            {% if messages.has_other_pages %}
-            <nav class="chat-pagination">
-                <ul class="pagination pagination-sm justify-content-center mb-3">
-                    {% if messages.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-                                <i class="fas fa-angle-double-left"></i>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ messages.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-                                <i class="fas fa-angle-left"></i>
-                            </a>
-                        </li>
-                    {% endif %}
-
-                    {% for num in messages.paginator.page_range %}
-                        {% if num == messages.number %}
-                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                        {% elif num > messages.number|add:'-3' and num < messages.number|add:'3' %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if messages.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ messages.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-                                <i class="fas fa-angle-right"></i>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ messages.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-                                <i class="fas fa-angle-double-right"></i>
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
-
-            <!-- Форма ввода сообщения -->
-            <div class="chat-input">
-                <form id="message-form" class="d-flex gap-2">
-                    <button type="button" class="btn btn-emoji" id="emoji-button" title="Эмодзи">
-                        <i class="fas fa-smile"></i>
-                    </button>
-                    <input type="text" id="message-input" class="form-control" placeholder="Введите сообщение..." autocomplete="off" maxlength="500">
-                    <button type="submit" class="btn btn-primary btn-send">
-                        <i class="fas fa-paper-plane me-1"></i>Отправить
-                    </button>
-                </form>
-
-                <!-- Пикер эмодзи -->
-                <div id="emoji-picker" class="emoji-picker">
-                    <div class="emoji-grid">
-                        <span class="emoji-item">😀</span><span class="emoji-item">😃</span><span class="emoji-item">😄</span><span class="emoji-item">😁</span>
-                        <span class="emoji-item">😅</span><span class="emoji-item">😂</span><span class="emoji-item">🤣</span><span class="emoji-item">😊</span>
-                        <span class="emoji-item">😇</span><span class="emoji-item">🙂</span><span class="emoji-item">😉</span><span class="emoji-item">😌</span>
-                        <span class="emoji-item">😍</span><span class="emoji-item">🥰</span><span class="emoji-item">😘</span><span class="emoji-item">😗</span>
-                        <span class="emoji-item">😙</span><span class="emoji-item">😚</span><span class="emoji-item">😋</span><span class="emoji-item">😛</span>
-                        <span class="emoji-item">😝</span><span class="emoji-item">😜</span><span class="emoji-item">🤪</span><span class="emoji-item">🤨</span>
-                        <span class="emoji-item">🧐</span><span class="emoji-item">🤓</span><span class="emoji-item">😎</span><span class="emoji-item">🤩</span>
-                        <span class="emoji-item">🥳</span><span class="emoji-item">😏</span><span class="emoji-item">😒</span><span class="emoji-item">😞</span>
-                        <span class="emoji-item">😔</span><span class="emoji-item">😟</span><span class="emoji-item">😕</span><span class="emoji-item">😣</span>
-                        <span class="emoji-item">😖</span><span class="emoji-item">😫</span><span class="emoji-item">😩</span><span class="emoji-item">🥺</span>
-                        <span class="emoji-item">😢</span><span class="emoji-item">😭</span><span class="emoji-item">😤</span><span class="emoji-item">😠</span>
-                        <span class="emoji-item">😡</span><span class="emoji-item">🤬</span><span class="emoji-item">🤯</span><span class="emoji-item">😳</span>
-                        <span class="emoji-item">🥵</span><span class="emoji-item">🥶</span><span class="emoji-item">😱</span><span class="emoji-item">😨</span>
-                        <span class="emoji-item">👍</span><span class="emoji-item">👎</span><span class="emoji-item">👏</span><span class="emoji-item">🙌</span>
-                        <span class="emoji-item">🤝</span><span class="emoji-item">🙏</span><span class="emoji-item">❤️</span><span class="emoji-item">💔</span>
-                        <span class="emoji-item">💯</span><span class="emoji-item">✨</span><span class="emoji-item">🔥</span><span class="emoji-item">⚡</span>
-                    </div>
-                </div>
-            </div>
+    <!-- ✅ ПАНЕЛЬ EMOJI -->
+    <div id="emoji-picker" class="emoji-picker">
+        <div class="emoji-grid">
+            <span class="emoji-item">😀</span><span class="emoji-item">😃</span><span class="emoji-item">😄</span><span class="emoji-item">😁</span>
+            <span class="emoji-item">😅</span><span class="emoji-item">😂</span><span class="emoji-item">🤣</span><span class="emoji-item">😊</span>
+            <span class="emoji-item">😇</span><span class="emoji-item">🙂</span><span class="emoji-item">😉</span><span class="emoji-item">😌</span>
+            <span class="emoji-item">😍</span><span class="emoji-item">🥰</span><span class="emoji-item">😘</span><span class="emoji-item">😗</span>
+            <span class="emoji-item">😙</span><span class="emoji-item">😚</span><span class="emoji-item">😋</span><span class="emoji-item">😛</span>
+            <span class="emoji-item">😝</span><span class="emoji-item">😜</span><span class="emoji-item">🤪</span><span class="emoji-item">🤨</span>
+            <span class="emoji-item">🧐</span><span class="emoji-item">🤓</span><span class="emoji-item">😎</span><span class="emoji-item">🤩</span>
+            <span class="emoji-item">🥳</span><span class="emoji-item">😏</span><span class="emoji-item">😒</span><span class="emoji-item">😞</span>
+            <span class="emoji-item">😔</span><span class="emoji-item">😟</span><span class="emoji-item">😕</span><span class="emoji-item">🙁</span>
+            <span class="emoji-item">☹️</span><span class="emoji-item">😣</span><span class="emoji-item">😖</span><span class="emoji-item">😫</span>
+            <span class="emoji-item">😩</span><span class="emoji-item">🥺</span><span class="emoji-item">😢</span><span class="emoji-item">😭</span>
+            <span class="emoji-item">😤</span><span class="emoji-item">😠</span><span class="emoji-item">😡</span><span class="emoji-item">🤬</span>
+            <span class="emoji-item">👍</span><span class="emoji-item">👎</span><span class="emoji-item">👌</span><span class="emoji-item">✌️</span>
+            <span class="emoji-item">🤞</span><span class="emoji-item">🤟</span><span class="emoji-item">🤘</span><span class="emoji-item">🤙</span>
+            <span class="emoji-item">👏</span><span class="emoji-item">🙌</span><span class="emoji-item">👐</span><span class="emoji-item">🤝</span>
+            <span class="emoji-item">🙏</span><span class="emoji-item">💪</span><span class="emoji-item">🦾</span><span class="emoji-item">🦿</span>
+            <span class="emoji-item">❤️</span><span class="emoji-item">🧡</span><span class="emoji-item">💛</span><span class="emoji-item">💚</span>
+            <span class="emoji-item">💙</span><span class="emoji-item">💜</span><span class="emoji-item">🖤</span><span class="emoji-item">🤍</span>
+            <span class="emoji-item">💯</span><span class="emoji-item">🔥</span><span class="emoji-item">⭐</span><span class="emoji-item">✨</span>
+            <span class="emoji-item">🎉</span><span class="emoji-item">🎊</span><span class="emoji-item">🎈</span><span class="emoji-item">🎁</span>
         </div>
     </div>
 </div>
+
+<style>
+.chat-container {
+    max-width: 1000px;
+    margin: 40px auto;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
+    position: relative;
+}
+
+.chat-header {
+    text-align: center;
+    color: white;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+}
+
+.chat-header h1 {
+    margin: 0;
+    font-size: 2em;
+    font-weight: 700;
+}
+
+.chat-description {
+    margin: 10px 0 0 0;
+    opacity: 0.9;
+    font-size: 1.1em;
+}
+
+.chat-messages {
+    height: 500px;
+    overflow-y: auto;
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    scroll-behavior: smooth;
+}
+
+.chat-messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #f8f9fa;
+    max-width: 70%;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message.my-message {
+    margin-left: auto;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 0.9em;
+}
+
+.message.my-message .message-header {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.message-time {
+    opacity: 0.7;
+    font-size: 0.85em;
+}
+
+.message-content {
+    word-wrap: break-word;
+    line-height: 1.5;
+}
+
+.no-messages {
+    text-align: center;
+    color: #999;
+    padding: 60px 20px;
+}
+
+.no-messages p {
+    font-size: 1.2em;
+    margin: 0;
+}
+
+/* ✅ ФОРМА С EMOJI */
+.message-form {
+    display: flex;
+    gap: 10px;
+    position: relative;
+}
+
+.btn-emoji {
+    padding: 15px 20px;
+    background: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    font-size: 1.5em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-emoji:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+}
+
+#chat-message-input {
+    flex: 1;
+    padding: 15px 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    font-size: 1em;
+    background: rgba(255, 255, 255, 0.95);
+    transition: all 0.3s ease;
+}
+
+#chat-message-input:focus {
+    outline: none;
+    border-color: white;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+    background: white;
+}
+
+.btn-send {
+    padding: 15px 30px;
+    background: white;
+    color: #667eea;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-size: 1em;
+}
+
+.btn-send:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 255, 255, 0.3);
+}
+
+.btn-send:active {
+    transform: translateY(0);
+}
+
+/* ✅ EMOJI PICKER */
+.emoji-picker {
+    display: none;
+    position: absolute;
+    bottom: 70px;
+    left: 0;
+    background: white;
+    border-radius: 15px;
+    padding: 15px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    max-width: 350px;
+    animation: emojiSlideUp 0.3s ease-out;
+}
+
+@keyframes emojiSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.emoji-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.emoji-grid::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.emoji-item {
+    font-size: 1.8em;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.emoji-item:hover {
+    background: #f0f0f0;
+    transform: scale(1.2);
+}
+
+/* ✅ УВЕДОМЛЕНИЯ МОДЕРАЦИИ */
+.moderation-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    transform: translateX(400px);
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    z-index: 10000;
+    max-width: 350px;
+}
+
+.moderation-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.moderation-icon {
+    font-size: 24px;
+    animation: shake 0.5s ease-in-out;
+}
+
+.moderation-text {
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+@media (max-width: 768px) {
+    .chat-container {
+        margin: 20px;
+        padding: 15px;
+    }
+
+    .chat-messages {
+        height: 400px;
+    }
+
+    .message {
+        max-width: 85%;
+    }
+
+    .message-form {
+        flex-wrap: wrap;
+    }
+
+    .btn-emoji {
+        order: 1;
+    }
+
+    #chat-message-input {
+        order: 2;
+        width: calc(100% - 70px);
+    }
+
+    .btn-send {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        margin-top: 10px;
+    }
+
+    .emoji-picker {
+        left: 0;
+        right: 0;
+        max-width: none;
+        bottom: 130px;
+    }
+
+    .emoji-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+
+    .moderation-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}
+</style>
 
 <script>
     const roomName = "{{ room_name }}";
     const currentUsername = "{{ user.username }}";
     const chatMessages = document.getElementById('chat-messages');
     const messageForm = document.getElementById('message-form');
-    const messageInput = document.getElementById('message-input');
+    const messageInput = document.getElementById('chat-message-input');
+    const submitButton = document.getElementById('chat-message-submit');
     const emojiButton = document.getElementById('emoji-button');
     const emojiPicker = document.getElementById('emoji-picker');
     let isEmojiPickerVisible = false;
 
-    // WebSocket подключение
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // WebSocket соединение
     const chatSocket = new WebSocket(
-        protocol + '//' + window.location.host + '/ws/chat/' + roomName + '/'
+        'ws://' + window.location.host + '/ws/chat/' + roomName + '/'
     );
 
-    // Прокрутка вниз
-    function scrollToBottom() {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+    chatSocket.onopen = function(e) {
+        console.log('✅ WebSocket соединение установлено');
+    };
 
-    // Получение сообщения
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
-        const isOwnMessage = data.username === currentUsername;
 
+        // ✅ Проверка на ошибку модерации
+        if (data.error || data.moderation_blocked) {
+            showModerationError(data.error || 'Ваше сообщение заблокировано');
+            return;
+        }
+
+        // Обычная обработка сообщения
         const messageDiv = document.createElement('div');
-        messageDiv.className = 'message-item animate-slide-right' + (isOwnMessage ? ' message-own' : '');
+        messageDiv.classList.add('message');
+
+        if (data.username === currentUsername) {
+            messageDiv.classList.add('my-message');
+        }
+
         messageDiv.innerHTML = `
-            <div class="message-avatar">
-                <i class="fas fa-user-circle"></i>
+            <div class="message-header">
+                <strong>${escapeHtml(data.username)}</strong>
+                <span class="message-time">${data.timestamp}</span>
             </div>
-            <div class="message-content">
-                <div class="message-header">
-                    <strong class="message-username">${data.username}</strong>
-                    <small class="message-time">${new Date().toLocaleString('ru-RU', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })}</small>
-                </div>
-                <p class="message-text">${data.message}</p>
-            </div>
+            <div class="message-content">${escapeHtml(data.message)}</div>
         `;
 
         chatMessages.appendChild(messageDiv);
-        scrollToBottom();
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     };
 
     chatSocket.onclose = function(e) {
-        console.error('WebSocket закрыт:', e);
+        console.error('❌ WebSocket соединение закрыто');
+    };
+
+    chatSocket.onerror = function(error) {
+        console.error('❌ Ошибка WebSocket:', error);
     };
 
     // Отправка сообщения
-    messageForm.onsubmit = function(e) {
+    messageForm.addEventListener('submit', function(e) {
         e.preventDefault();
+
         const message = messageInput.value.trim();
 
-        if (message) {
-            chatSocket.send(JSON.stringify({
-                'message': message
-            }));
-            messageInput.value = '';
+        if (message === '') {
+            return;
         }
-    };
 
-    // Эмодзи пикер
+        chatSocket.send(JSON.stringify({
+            'message': message
+        }));
+
+        messageInput.value = '';
+        messageInput.focus();
+    });
+
+    // Отправка по Enter
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            submitButton.click();
+        }
+    });
+
+    // ✅ EMOJI PICKER
     emojiButton.addEventListener('click', function(e) {
         e.stopPropagation();
         emojiPicker.style.display = isEmojiPickerVisible ? 'none' : 'block';
         isEmojiPickerVisible = !isEmojiPickerVisible;
     });
 
+    // Вставка emoji в поле
     document.querySelectorAll('.emoji-item').forEach(emoji => {
         emoji.addEventListener('click', function() {
             messageInput.value += this.textContent;
@@ -217,6 +502,7 @@
         });
     });
 
+    // Закрытие picker при клике вне его
     document.addEventListener('click', function(e) {
         if (!emojiPicker.contains(e.target) && e.target !== emojiButton) {
             emojiPicker.style.display = 'none';
@@ -224,14 +510,39 @@
         }
     });
 
-    emojiPicker.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
+    // ✅ Функция показа ошибки модерации
+    function showModerationError(errorMessage) {
+        const notification = document.createElement('div');
+        notification.className = 'moderation-notification';
+        notification.innerHTML = `
+            <div class="moderation-icon">⚠️</div>
+            <div class="moderation-text">${escapeHtml(errorMessage)}</div>
+        `;
 
-    // Автофокус на поле ввода
+        document.body.appendChild(notification);
+
+        setTimeout(() => notification.classList.add('show'), 10);
+
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 4000);
+    }
+
+    // Функция для экранирования HTML
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Автофокус
     messageInput.focus();
-
-    // Прокрутка при загрузке
-    scrollToBottom();
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 </script>
 {% endblock %}

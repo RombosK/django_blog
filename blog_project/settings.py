@@ -27,14 +27,14 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.getenv('SECRET_DJANGO', 'django-insecure-8i4@r4m81&w*j%7w&$5xcx76y^2(vuli2tami#dxaq&7hfptvi')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+# DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
 
-SITE_ID = 1
-
-ENV_TYPE = os.getenv('ENV_TYPE', 'local')
-
+# ENV_TYPE = os.getenv('ENV_TYPE', 'local')
+ENV_TYPE = os.getenv('ENV_TYPE', 'prod')
 # Internal IPs для Django Debug Toolbar
 if DEBUG:
     INTERNAL_IPS = [
@@ -50,8 +50,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_comments',
-    'django.contrib.sites',
     'blog',
     'debug_toolbar',
     'crispy_forms',
@@ -72,6 +70,14 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'blog.middleware.DatabaseQueryCountMiddleware',
 ]
+
+# Security settings для production
+if not DEBUG:
+    # SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 ROOT_URLCONF = 'blog_project.urls'
 
@@ -124,12 +130,16 @@ if ENV_TYPE == 'local':
 else:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': 'blog',
-            'USER': 'postgres',
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'blog'),
+            'USER': os.getenv('DB_USER', 'postgres'),
             'PASSWORD': os.getenv('DB_PASSWORD'),
             'HOST': os.getenv('DB_HOST', 'localhost'),
-            'PORT': os.getenv('DB_PORT', '5432')
+            'PORT': os.getenv('DB_PORT', '5432'),
+            'CONN_MAX_AGE': 600,
+            'OPTIONS': {
+                'connect_timeout': 10,
+            },
         }
     }
 

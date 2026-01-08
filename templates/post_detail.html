@@ -59,28 +59,27 @@
 
                     <!-- Реакции -->
                     {% if user.is_authenticated %}
-                    <div class="reactions-section">
+                    <div class="reactions-section" id="reactions-section">
                         <h6 class="reactions-title">
                             <i class="fas fa-heart me-2"></i>Ваша реакция
                         </h6>
                         <div class="reactions-buttons">
-                            <form method="post" action="{% url 'blog:toggle_reaction' post.pk %}" class="reaction-form">
-                                {% csrf_token %}
-                                <input type="hidden" name="reaction_type" value="like">
-                                <button type="submit" class="btn-reaction btn-like {% if user_reaction == 'like' %}active{% endif %}">
-                                    <span class="reaction-icon">👍</span>
-                                    <span class="reaction-count">{{ like_count }}</span>
-                                </button>
-                            </form>
+                            <!-- ✅ AJAX кнопки -->
+                            <button type="button" 
+                                    class="btn-reaction btn-like {% if user_reaction == 'like' %}active{% endif %}" 
+                                    data-reaction="like"
+                                    onclick="toggleReaction('like')">
+                                <span class="reaction-icon">👍</span>
+                                <span class="reaction-count" id="like-count">{{ like_count }}</span>
+                            </button>
 
-                            <form method="post" action="{% url 'blog:toggle_reaction' post.pk %}" class="reaction-form">
-                                {% csrf_token %}
-                                <input type="hidden" name="reaction_type" value="dislike">
-                                <button type="submit" class="btn-reaction btn-dislike {% if user_reaction == 'dislike' %}active{% endif %}">
-                                    <span class="reaction-icon">👎</span>
-                                    <span class="reaction-count">{{ dislike_count }}</span>
-                                </button>
-                            </form>
+                            <button type="button" 
+                                    class="btn-reaction btn-dislike {% if user_reaction == 'dislike' %}active{% endif %}" 
+                                    data-reaction="dislike"
+                                    onclick="toggleReaction('dislike')">
+                                <span class="reaction-icon">👎</span>
+                                <span class="reaction-count" id="dislike-count">{{ dislike_count }}</span>
+                            </button>
 
                             <a href="{% url 'blog:chat_room' post.slug|default:'general' %}" class="btn-reaction btn-discuss">
                                 <span class="reaction-icon">💬</span>
@@ -119,4 +118,98 @@
         </div>
     </div>
 </div>
+
+<!-- ✅ ИСПРАВЛЕННЫЙ AJAX скрипт с правильным CSRF -->
+<script>
+    const postId = {{ post.pk }};
+    let currentReaction = '{{ user_reaction }}' || null;
+
+    // ✅ ИСПРАВЛЕНИЕ: Функция получения CSRF токена из cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const csrfToken = getCookie('csrftoken');
+
+    function toggleReaction(reactionType) {
+        // Показываем визуальный фидбек сразу
+        const likeBtn = document.querySelector('.btn-like');
+        const dislikeBtn = document.querySelector('.btn-dislike');
+
+        // ✅ ИСПРАВЛЕНИЕ: Правильная отправка CSRF токена
+        const formData = new FormData();
+        formData.append('reaction_type', reactionType);
+        formData.append('csrfmiddlewaretoken', csrfToken);
+
+        // Отправляем AJAX запрос
+        fetch(`/toggle-reaction/${postId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // ✅ Обновляем счетчики БЕЗ перезагрузки
+                document.getElementById('like-count').textContent = data.like_count;
+                document.getElementById('dislike-count').textContent = data.dislike_count;
+
+                // ✅ Обновляем активные классы
+                likeBtn.classList.remove('active');
+                dislikeBtn.classList.remove('active');
+
+                if (data.user_reaction === 'like') {
+                    likeBtn.classList.add('active');
+                    currentReaction = 'like';
+                } else if (data.user_reaction === 'dislike') {
+                    dislikeBtn.classList.add('active');
+                    currentReaction = 'dislike';
+                } else {
+                    currentReaction = null;
+                }
+
+                // ✅ Анимация при клике
+                const clickedBtn = reactionType === 'like' ? likeBtn : dislikeBtn;
+                clickedBtn.style.transform = 'scale(1.2)';
+                setTimeout(() => {
+                    clickedBtn.style.transform = 'scale(1)';
+                }, 200);
+
+                // ✅ Показываем сообщение (необязательно)
+                console.log(data.message);
+
+            } else if (data.error) {
+                alert(data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            alert('Произошла ошибка при обработке реакции. Попробуйте обновить страницу.');
+        });
+    }
+
+    // ✅ Плавная анимация для кнопок
+    document.querySelectorAll('.btn-reaction').forEach(btn => {
+        btn.style.transition = 'all 0.2s ease';
+    });
+</script>
 {% endblock %}

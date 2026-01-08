@@ -13,6 +13,7 @@ from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, FormView
 from django.urls import reverse_lazy
 from django.views import View
+from django.http import JsonResponse
 from .performance_utils import get_recent_messages_optimized, invalidate_posts_cache
 
 
@@ -291,7 +292,7 @@ class PostDetailView(DetailView):
 
 
 class ToggleReactionView(View):
-    """Переключение реакции на пост"""
+    """Переключение реакции на пост с поддержкой AJAX"""
     http_method_names = ['post']
 
     def post(self, request, pk):
@@ -299,15 +300,27 @@ class ToggleReactionView(View):
         post = get_object_or_404(Post, pk=pk)
 
         if not request.user.is_authenticated:
-            messages.error(
-                request,
-                'Для установки реакции необходимо войти в систему.'
-            )
+            # ✅ AJAX запрос - возвращаем JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Необходимо авторизоваться'
+                }, status=401)
+
+            # Обычный запрос - редирект
+            messages.error(request, 'Для установки реакции необходимо войти в систему.')
             return redirect('blog:login')
 
         reaction_type = request.POST.get('reaction_type')
 
         if reaction_type not in ['like', 'dislike']:
+            # ✅ AJAX запрос - возвращаем JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Недопустимый тип реакции'
+                }, status=400)
+
             messages.error(request, 'Недопустимый тип реакции.')
             return redirect('blog:post_detail', pk=pk)
 
@@ -318,20 +331,93 @@ class ToggleReactionView(View):
             defaults={'reaction_type': reaction_type}
         )
 
+        user_reaction = None
+
         if not created:
             if reaction.reaction_type == reaction_type:
                 # Отмена реакции
                 reaction.delete()
-                messages.success(request, 'Реакция удалена.')
+                message = 'Реакция удалена'
             else:
                 # Изменение реакции
                 reaction.reaction_type = reaction_type
                 reaction.save()
-                messages.success(request, 'Реакция изменена.')
+                user_reaction = reaction_type
+                message = 'Реакция изменена'
         else:
-            messages.success(request, 'Реакция добавлена.')
+            user_reaction = reaction_type
+            message = 'Реакция добавлена'
 
         # ✅ Сбрасываем кеш реакций
         cache.delete(f'post_reactions_{pk}')
 
+        # ✅ AJAX запрос - возвращаем JSON с обновленными данными
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Получаем актуальные счетчики
+            reaction_stats = PostReaction.objects.filter(
+                post=post
+            ).values('reaction_type').annotate(count=Count('reaction_type'))
+
+            reaction_counts = {
+                item['reaction_type']: item['count']
+                for item in reaction_stats
+            }
+
+            return JsonResponse({
+                'success': True,
+                'message': message,
+                'like_count': reaction_counts.get('like', 0),
+                'dislike_count': reaction_counts.get('dislike', 0),
+                'user_reaction': user_reaction
+            })
+
+        # Обычный запрос - редирект
+        messages.success(request, message)
         return redirect('blog:post_detail', pk=pk)
+
+
+# class ToggleReactionView(View):
+#     """Переключение реакции на пост"""
+#     http_method_names = ['post']
+#
+#     def post(self, request, pk):
+#         """Обработка POST запроса для переключения реакции"""
+#         post = get_object_or_404(Post, pk=pk)
+#
+#         if not request.user.is_authenticated:
+#             messages.error(
+#                 request,
+#                 'Для установки реакции необходимо войти в систему.'
+#             )
+#             return redirect('blog:login')
+#
+#         reaction_type = request.POST.get('reaction_type')
+#
+#         if reaction_type not in ['like', 'dislike']:
+#             messages.error(request, 'Недопустимый тип реакции.')
+#             return redirect('blog:post_detail', pk=pk)
+#
+#         # ✅ ОПТИМИЗАЦИЯ: get_or_create без дополнительных запросов
+#         reaction, created = PostReaction.objects.get_or_create(
+#             user=request.user,
+#             post=post,
+#             defaults={'reaction_type': reaction_type}
+#         )
+#
+#         if not created:
+#             if reaction.reaction_type == reaction_type:
+#                 # Отмена реакции
+#                 reaction.delete()
+#                 messages.success(request, 'Реакция удалена.')
+#             else:
+#                 # Изменение реакции
+#                 reaction.reaction_type = reaction_type
+#                 reaction.save()
+#                 messages.success(request, 'Реакция изменена.')
+#         else:
+#             messages.success(request, 'Реакция добавлена.')
+#
+#         # ✅ Сбрасываем кеш реакций
+#         cache.delete(f'post_reactions_{pk}')
+#
+#         return redirect('blog:post_detail', pk=pk)
