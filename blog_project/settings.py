@@ -27,14 +27,14 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.getenv('SECRET_DJANGO', 'django-insecure-8i4@r4m81&w*j%7w&$5xcx76y^2(vuli2tami#dxaq&7hfptvi')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = os.getenv('DEBUG', 'True') == 'True'
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
+# DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-# ALLOWED_HOSTS = ['*']
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
+ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
 
-# ENV_TYPE = os.getenv('ENV_TYPE', 'local')
-ENV_TYPE = os.getenv('ENV_TYPE', 'prod')
+ENV_TYPE = os.getenv('ENV_TYPE', 'local')
+# ENV_TYPE = os.getenv('ENV_TYPE', 'prod')
 # Internal IPs для Django Debug Toolbar
 if DEBUG:
     INTERNAL_IPS = [
