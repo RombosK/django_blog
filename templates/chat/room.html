@@ -43,26 +43,21 @@
                  data-room-name="{{ room_name }}"
                  data-current-username="{{ user.username }}">
 
-                <!-- Старые сообщения из БД -->
-                <div id="history-messages">
-                    {% for message in messages %}
-                    <div class="message-wrapper {% if message.user.username == user.username %}own{% else %}other{% endif %}">
-                        <div class="message-bubble">
-                            <span class="message-username">{{ message.user.username }}</span>
-                            <p class="message-text">{{ message.content }}</p>
-                            <small class="message-time">{{ message.created_at|date:"H:i" }}</small>
-                        </div>
+                <!-- ✅ ТОЛЬКО старые сообщения из БД (загружаются через template) -->
+                {% for message in messages %}
+                <div class="message-wrapper {% if message.user.username == user.username %}own{% else %}other{% endif %}">
+                    <div class="message-bubble">
+                        <span class="message-username">{{ message.user.username }}</span>
+                        <p class="message-text">{{ message.content }}</p>
+                        <small class="message-time">{{ message.created_at|date:"H:i" }}</small>
                     </div>
-                    {% empty %}
-                    <div class="text-center text-muted py-5" id="empty-placeholder">
-                        <i class="fas fa-comments fa-3x mb-3 opacity-25"></i>
-                        <p>Пока нет сообщений. Начните общение!</p>
-                    </div>
-                    {% endfor %}
                 </div>
-
-                <!-- Новые сообщения WebSocket -->
-                <div id="new-messages"></div>
+                {% empty %}
+                <div class="text-center text-muted py-5" id="empty-placeholder">
+                    <i class="fas fa-comments fa-3x mb-3 opacity-25"></i>
+                    <p>Пока нет сообщений. Начните общение!</p>
+                </div>
+                {% endfor %}
             </div>
 
             <!-- Пагинация -->
@@ -139,21 +134,24 @@
     );
 
     const messagesContainer = document.getElementById('chat-messages');
-    const newMessagesContainer = document.getElementById('new-messages');
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
     const emojiButton = document.getElementById('emojiButton');
     const emojiPicker = document.getElementById('emojiPicker');
     const emojiGrid = document.getElementById('emojiGrid');
 
+    // Прокрутка вниз при загрузке
     if (messagesContainer) {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
+    // ✅ ИСПРАВЛЕНО: Обрабатываем ТОЛЬКО новые сообщения (без is_history)
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
-        console.log('📨 Message:', data);
 
+        console.log('📨 Received:', data);
+
+        // Обработка ошибок
         if (data.error) {
             if (data.moderation_blocked) {
                 alert('Модератор: ' + data.error);
@@ -163,12 +161,23 @@
             return;
         }
 
-        const placeholder = document.getElementById('empty-placeholder');
-        if (placeholder) placeholder.remove();
+        // ✅ ПРОВЕРКА: Игнорируем исторические сообщения (на случай если они придут)
+        if (data.is_history) {
+            console.log('⏭️ Skipping history message');
+            return;
+        }
 
+        // Удаляем placeholder если есть
+        const placeholder = document.getElementById('empty-placeholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
+
+        // Определяем, чьё сообщение
         const isOwnMessage = data.username === currentUsername;
         console.log('Own message:', isOwnMessage);
 
+        // Создаём элементы сообщения
         const wrapper = document.createElement('div');
         wrapper.className = `message-wrapper ${isOwnMessage ? 'own' : 'other'}`;
 
@@ -192,13 +201,14 @@
         bubble.appendChild(time);
         wrapper.appendChild(bubble);
 
-        newMessagesContainer.appendChild(wrapper);
+        messagesContainer.appendChild(wrapper);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     };
 
     chatSocket.onopen = () => console.log('✅ WebSocket connected');
     chatSocket.onclose = () => console.error('❌ WebSocket closed');
 
+    // Отправка сообщения
     function sendMessage() {
         const message = messageInput.value.trim();
         if (message) {
@@ -216,6 +226,7 @@
         }
     });
 
+    // Смайлики
     const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👏','🙌','👐','🤲','🤝','🙏','✍️','💪','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','⭐','🌟','✨','⚡','🔥','💥','💫','💦','💨','🌈','☀️','🌙'];
 
     emojis.forEach(emoji => {

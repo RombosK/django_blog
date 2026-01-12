@@ -13,8 +13,9 @@ logger = logging.getLogger(__name__)
 
 class OptimizedChatConsumer(AsyncWebsocketConsumer):
     """
-    Оптимизированная версия чат-консьюмера с историей сообщений
+    Оптимизированная версия чат-консьюмера
     """
+
     async def connect(self):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
 
@@ -22,6 +23,7 @@ class OptimizedChatConsumer(AsyncWebsocketConsumer):
         safe_room_name = re.sub(r'[^a-zA-Z0-9\-_\.]', '', self.room_name)
         if not safe_room_name:
             safe_room_name = 'default'
+
         self.room_group_name = f'chat_{safe_room_name}'
 
         # Присоединяемся к группе комнаты
@@ -32,8 +34,7 @@ class OptimizedChatConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
 
-        # ✅ НОВОЕ: Отправляем историю сообщений при подключении
-        await self.send_chat_history()
+        # ❌ УДАЛЕНО: send_chat_history() - теперь сообщения загружаются только через template
 
     async def disconnect(self, close_code):
         """Отключение от комнаты"""
@@ -93,7 +94,7 @@ class OptimizedChatConsumer(AsyncWebsocketConsumer):
                     'type': 'chat_message',
                     'message': message_content,
                     'username': username,
-                    'timestamp': localized_time.strftime('%d.%m.%Y %H:%M')
+                    'timestamp': localized_time.strftime('%H:%M')  # ✅ ИЗМЕНЕНО: только время
                 }
             )
 
@@ -111,62 +112,13 @@ class OptimizedChatConsumer(AsyncWebsocketConsumer):
         """Отправка сообщения клиенту"""
         message = event['message']
         username = event['username']
-        timestamp = event.get('timestamp', timezone.now().strftime('%d.%m.%Y %H:%M'))
+        timestamp = event.get('timestamp', timezone.localtime(timezone.now()).strftime('%H:%M'))
 
         await self.send(text_data=json.dumps({
             'message': message,
             'username': username,
             'timestamp': timestamp
         }))
-
-    async def send_chat_history(self):
-        """
-        ✅ НОВОЕ: Отправка истории последних сообщений при подключении
-        Решает проблему: новый пользователь видит предыдущие сообщения
-        """
-        try:
-            # Получаем последние 50 сообщений из БД
-            messages = await self.get_recent_messages()
-
-            if messages:
-                # Отправляем каждое сообщение клиенту
-                for msg in messages:
-                    await self.send(text_data=json.dumps({
-                        'message': msg['content'],
-                        'username': msg['username'],
-                        'timestamp': msg['timestamp'],
-                        'is_history': True  # Флаг что это историческое сообщение
-                    }))
-
-        except Exception as e:
-            logger.error(f"Ошибка при загрузке истории чата: {str(e)}", exc_info=True)
-
-    @database_sync_to_async
-    def get_recent_messages(self):
-        """
-        ✅ НОВОЕ: Получение последних сообщений из БД
-        С оптимизацией select_related для уменьшения запросов
-        """
-        try:
-            room = ChatRoom.objects.get(name=self.room_name)
-
-            # Получаем последние 50 сообщений с оптимизацией
-            messages = Message.objects.filter(
-                room=room,
-                is_blocked=False
-            ).select_related('user').order_by('-created_at')[:50]
-
-            # Преобразуем в список словарей (reversed для правильного порядка)
-            return [
-                {
-                    'content': msg.content,
-                    'username': msg.user.username,
-                    'timestamp': timezone.localtime(msg.created_at).strftime('%d.%m.%Y %H:%M')
-                }
-                for msg in reversed(messages)
-            ]
-        except ChatRoom.DoesNotExist:
-            return []
 
     @database_sync_to_async
     def get_or_create_room_cached(self):
