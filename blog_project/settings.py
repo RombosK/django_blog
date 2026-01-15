@@ -24,7 +24,7 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_DJANGO', 'django-insecure-8i4@r4m81&w*j%7w&$5xcx76y^2(vuli2tami#dxaq&7hfptvi')
+SECRET_KEY = os.getenv('SECRET_DJANGO', )
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
@@ -73,7 +73,8 @@ MIDDLEWARE = [
 
 # Security settings для production
 if not DEBUG:
-    # SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SESSION_COOKIE_SECURE = True
@@ -256,14 +257,6 @@ MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 # Crispy Forms
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
-# Security settings
-SECURE_SSL_REDIRECT = False
-SECURE_HSTS_SECONDS = 0
-SECURE_HSTS_INCLUDE_SUBDOMAINS = False
-SECURE_HSTS_PRELOAD = False
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
-
 # Настройки обработчиков ошибок
 handler404 = 'django.views.defaults.page_not_found'
 handler500 = 'blog_project.views.custom_server_error'
@@ -278,5 +271,15 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-# Настройки логирования
-from .logging_config import LOGGING
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/3'
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/3'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+
+# Django Debug Toolbar - не перехватывать редиректы
+if DEBUG:
+    DEBUG_TOOLBAR_CONFIG = {
+        'INTERCEPT_REDIRECTS': False,
+    }
+

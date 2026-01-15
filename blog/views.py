@@ -1,24 +1,36 @@
+from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q, Count, Prefetch
-from django.http import Http404
+from django.http import Http404, HttpResponseRedirect
 from django.contrib.auth.views import LoginView as DjangoLoginView, LogoutView
 from django.contrib.auth import login
 from django.core.cache import cache
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+
 from .models import Post, PostReaction, ChatRoom, Message
-from .forms import CustomUserCreationForm, CustomAuthenticationForm
+from .forms import CustomUserCreationForm, CustomAuthenticationForm, CustomPasswordResetForm
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, FormView
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.views import View
 from django.http import JsonResponse
 from .performance_utils import get_recent_messages_optimized, invalidate_posts_cache
+# from django.contrib.auth.views import PasswordResetView
 
+
+# ✅ Импортируем Celery задачи
+from .tasks import (
+    send_welcome_email,
+    send_password_reset_email,
+    optimize_post_image,
+    delete_post_files
+)
 
 User = get_user_model()
-
 
 @login_required
 def chat_room(request, room_name):
@@ -32,17 +44,15 @@ def chat_room(request, room_name):
     # ✅ КЕШИРОВАНИЕ: используем кеш только без поиска
     if not search_query:
         messages_qs = cache.get(cache_key)
-
         if messages_qs is None:
             # Кеша нет - запрашиваем БД с оптимизацией
             messages_qs = Message.objects.filter(
                 room=room,
                 is_blocked=False
             ).select_related('user').order_by('-created_at')
-
             # Сохраняем в кеш на 5 минут
             cache.set(cache_key, list(messages_qs), 300)
-            messages_qs = list(messages_qs)
+        messages_qs = list(messages_qs)
     else:
         # Поиск - всегда из БД
         messages_qs = Message.objects.filter(
@@ -104,7 +114,6 @@ class HomeView(ListView):
 
         context['total_posts'] = total_posts
         context['search_query'] = self.request.GET.get('q', '')
-
         return context
 
 
@@ -131,8 +140,37 @@ class RegisterView(FormView):
         """Обработка успешной регистрации"""
         user = form.save()
         login(self.request, user)
-        messages.success(self.request, 'Регистрация прошла успешно!')
+
+        # ✅ CELERY: Отправляем приветственное письмо асинхронно
+        send_welcome_email.delay(user.id)
+
+        messages.success(self.request, 'Регистрация прошла успешно! Проверьте email.')
         return super().form_valid(form)
+
+
+class CustomPasswordResetView(FormView):
+    form_class = CustomPasswordResetForm
+    template_name = 'registration/password_reset_form.html'
+    success_url = '/accounts/password_reset/done/'
+
+    def form_valid(self, form):
+        email = form.cleaned_data["email"]
+
+        for user in form.get_users(email):
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+            reset_url = self.request.build_absolute_uri(
+                reverse('blog:password_reset_confirm', kwargs={
+                    'uidb64': uid,
+                    'token': token,
+                })
+            )
+
+            send_password_reset_email.delay(user.email, reset_url)
+
+        # ✅ ЯВНЫЙ redirect БЕЗ super()
+        return HttpResponseRedirect('/accounts/password_reset/done/')
 
 
 @login_required
@@ -163,10 +201,14 @@ class PostCreateView(CreateView):
         form.instance.author = self.request.user
         response = super().form_valid(form)
 
+        # ✅ CELERY: Оптимизируем изображение асинхронно (если загружено)
+        if self.object.image:
+            optimize_post_image.delay(self.object.id)
+
         # ✅ Сбрасываем кеш после создания поста
         cache.delete('total_published_posts')
 
-        messages.success(self.request, 'Пост успешно создан.')
+        messages.success(self.request, 'Пост успешно создан. Изображение оптимизируется...')
         return response
 
 
@@ -186,7 +228,17 @@ class PostUpdateView(UpdateView):
 
     def form_valid(self, form):
         """Обработка успешного сохранения и сброс кеша"""
+        # Сохраняем старое изображение
+        old_image = None
+        if self.object.pk:
+            old_post = Post.objects.get(pk=self.object.pk)
+            old_image = old_post.image
+
         response = super().form_valid(form)
+
+        # ✅ CELERY: Если изображение изменилось, оптимизируем новое
+        if self.object.image and self.object.image != old_image:
+            optimize_post_image.delay(self.object.id)
 
         # ✅ Сбрасываем кеш поста
         cache.delete(f'post_{self.object.pk}')
@@ -211,8 +263,17 @@ class PostDeleteView(DeleteView):
 
     def delete(self, request, *args, **kwargs):
         """Обработка успешного удаления и сброс кеша"""
-        post_id = self.get_object().pk
+        post = self.get_object()
+        post_id = post.pk
+
+        # Сохраняем путь к изображению до удаления
+        image_path = post.image.path if post.image else None
+
         response = super().delete(request, *args, **kwargs)
+
+        # ✅ CELERY: Удаляем файлы асинхронно
+        if image_path:
+            delete_post_files.delay(image_path)
 
         # ✅ Сбрасываем кеш
         cache.delete('total_published_posts')
@@ -374,50 +435,3 @@ class ToggleReactionView(View):
         # Обычный запрос - редирект
         messages.success(request, message)
         return redirect('blog:post_detail', pk=pk)
-
-
-# class ToggleReactionView(View):
-#     """Переключение реакции на пост"""
-#     http_method_names = ['post']
-#
-#     def post(self, request, pk):
-#         """Обработка POST запроса для переключения реакции"""
-#         post = get_object_or_404(Post, pk=pk)
-#
-#         if not request.user.is_authenticated:
-#             messages.error(
-#                 request,
-#                 'Для установки реакции необходимо войти в систему.'
-#             )
-#             return redirect('blog:login')
-#
-#         reaction_type = request.POST.get('reaction_type')
-#
-#         if reaction_type not in ['like', 'dislike']:
-#             messages.error(request, 'Недопустимый тип реакции.')
-#             return redirect('blog:post_detail', pk=pk)
-#
-#         # ✅ ОПТИМИЗАЦИЯ: get_or_create без дополнительных запросов
-#         reaction, created = PostReaction.objects.get_or_create(
-#             user=request.user,
-#             post=post,
-#             defaults={'reaction_type': reaction_type}
-#         )
-#
-#         if not created:
-#             if reaction.reaction_type == reaction_type:
-#                 # Отмена реакции
-#                 reaction.delete()
-#                 messages.success(request, 'Реакция удалена.')
-#             else:
-#                 # Изменение реакции
-#                 reaction.reaction_type = reaction_type
-#                 reaction.save()
-#                 messages.success(request, 'Реакция изменена.')
-#         else:
-#             messages.success(request, 'Реакция добавлена.')
-#
-#         # ✅ Сбрасываем кеш реакций
-#         cache.delete(f'post_reactions_{pk}')
-#
-#         return redirect('blog:post_detail', pk=pk)
